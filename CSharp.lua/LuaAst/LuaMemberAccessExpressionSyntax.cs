@@ -25,7 +25,7 @@ namespace CSharpLua.LuaAst {
     public LuaExpressionSyntax Name { get; }
     public string OperatorToken { get; }
 
-    public LuaMemberAccessExpressionSyntax(LuaExpressionSyntax expression, LuaExpressionSyntax name, bool isObjectColon = false) {
+    public LuaMemberAccessExpressionSyntax(LuaExpressionSyntax expression, LuaExpressionSyntax name, bool isObjectColon = false): base(expression.line < 0 ? name.line : expression.line) {
       Expression = expression ?? throw new ArgumentNullException(nameof(expression));
       Name = name ?? throw new ArgumentNullException(nameof(name));
       OperatorToken = isObjectColon ? Tokens.ObjectColon : Tokens.Dot;
@@ -50,13 +50,13 @@ namespace CSharpLua.LuaAst {
     public LuaExpressionSyntax Expression { get; private set; }
     public string OperatorToken { get; private set; }
     public LuaPropertyOrEventIdentifierNameSyntax Name { get; }
-    public readonly LuaArgumentListSyntax ArgumentList = new();
+    public readonly LuaArgumentListSyntax ArgumentList = new(-1);
 
-    public LuaPropertyAdapterExpressionSyntax(LuaPropertyOrEventIdentifierNameSyntax name) {
+    public LuaPropertyAdapterExpressionSyntax(LuaPropertyOrEventIdentifierNameSyntax name): base(name.line) {
       Name = name;
     }
 
-    public LuaPropertyAdapterExpressionSyntax(LuaExpressionSyntax expression, LuaPropertyOrEventIdentifierNameSyntax name, bool isObjectColon) {
+    public LuaPropertyAdapterExpressionSyntax(LuaExpressionSyntax expression, LuaPropertyOrEventIdentifierNameSyntax name, bool isObjectColon): base(expression.line) {
       Update(expression, isObjectColon);
       Name = name;
     }
@@ -118,9 +118,9 @@ namespace CSharpLua.LuaAst {
     public string SetTemplate { get; private set; }
     public LuaCodeTemplateExpressionSyntax GetExpression { get; private set; }
     public LuaIdentifierNameSyntax Name { get; private set; }
-    public readonly LuaArgumentListSyntax ArgumentList = new();
+    public readonly LuaArgumentListSyntax ArgumentList = new(-1);
 
-    public LuaPropertyTemplateExpressionSyntax(string getExpression, string setExpression) {
+    public LuaPropertyTemplateExpressionSyntax(string getExpression, string setExpression): base(-1) {
       GetTemplate = getExpression;
       SetTemplate = setExpression;
     }

@@ -26,11 +26,15 @@ namespace CSharpLua.LuaAst {
     public int TempCount;
     public int ReleaseCount;
     public List<int> UsingDeclarations;
+
+    public LuaBlockSyntax(int line) : base(line) {
+    }
+
     public bool HasUsingDeclarations => UsingDeclarations != null;
 
     internal void AddHeadVariable(LuaIdentifierNameSyntax name) {
       if (headVariables_ == null) {
-        headVariables_ = new LuaLocalAreaSyntax();
+        headVariables_ = new LuaLocalAreaSyntax(name.line);
         Statements.Insert(0, headVariables_);
       }
       headVariables_.Variables.Add(name);
@@ -54,7 +58,7 @@ namespace CSharpLua.LuaAst {
   }
 
   public sealed class LuaBlockStatementSyntax : LuaBlockSyntax {
-    public LuaBlockStatementSyntax() {
+    public LuaBlockStatementSyntax(int line) : base(line) {
       OpenToken = Keyword.Do;
       CloseToken = Keyword.End;
     }

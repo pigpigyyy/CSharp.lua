@@ -20,6 +20,12 @@ using System.Diagnostics.Contracts;
 
 namespace CSharpLua.LuaAst {
   public class LuaSyntaxNode {
+    public LuaSyntaxNode(int line) {
+      this.line = line;
+    }
+
+    public int line { get; private set; }
+
     internal virtual void Render(LuaRenderer renderer) {
       throw new NotSupportedException($"{GetType().Name} is not override");
     }
@@ -127,7 +133,7 @@ namespace CSharpLua.LuaAst {
       "internal", "virtual",
     };
 
-    private static readonly HashSet<string> ReservedWords = new() {            
+    private static readonly HashSet<string> ReservedWords = new() {
       // compiler reserved words
       "System", "Linq",
     };
@@ -145,7 +151,7 @@ namespace CSharpLua.LuaAst {
       "__band", "__bor", "__bxor", "__bnot", "__shl", "__shr", "__concat", "__len",
       "__eq", "__lt", "__le", "__index", "__newindex", "__call", "__gc",
 
-      // adapter special methods 
+      // adapter special methods
       "__name__", "__ctor__", "__metadata__", "__clone__",
     };
 

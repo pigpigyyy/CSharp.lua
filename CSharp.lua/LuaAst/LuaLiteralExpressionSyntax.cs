@@ -19,16 +19,19 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace CSharpLua.LuaAst {
   public abstract class LuaLiteralExpressionSyntax : LuaExpressionSyntax {
+    protected LuaLiteralExpressionSyntax(int line) : base(line) {
+    }
+
     public abstract string Text { get; }
   }
 
   public sealed class LuaIdentifierLiteralExpressionSyntax : LuaLiteralExpressionSyntax {
     public LuaIdentifierNameSyntax Identifier { get; }
 
-    public LuaIdentifierLiteralExpressionSyntax(string text) : this((LuaIdentifierNameSyntax)text) {
+    public LuaIdentifierLiteralExpressionSyntax(string text) : this(new LuaIdentifierNameSyntax(text, -1)) {
     }
 
-    public LuaIdentifierLiteralExpressionSyntax(LuaIdentifierNameSyntax identifier) {
+    public LuaIdentifierLiteralExpressionSyntax(LuaIdentifierNameSyntax identifier): base(identifier.line) {
       Identifier = identifier;
     }
 
@@ -52,7 +55,7 @@ namespace CSharpLua.LuaAst {
     public LuaIdentifierNameSyntax Identifier { get; }
     public string CloseParenToken => Tokens.Quote;
 
-    public LuaStringLiteralExpressionSyntax(LuaIdentifierNameSyntax identifier) {
+    public LuaStringLiteralExpressionSyntax(LuaIdentifierNameSyntax identifier): base(identifier.line) {
       Identifier = identifier;
     }
 
@@ -75,7 +78,7 @@ namespace CSharpLua.LuaAst {
     public string OpenBracket => Tokens.OpenBracket;
     public string CloseBracket => Tokens.CloseBracket;
 
-    public LuaVerbatimStringLiteralExpressionSyntax(string value, bool checkNewLine = true) {
+    public LuaVerbatimStringLiteralExpressionSyntax(string value, bool checkNewLine = true): base(-1) {
       char equals = Tokens.Equals[0];
       int count = 0;
       while (true) {
@@ -125,7 +128,7 @@ namespace CSharpLua.LuaAst {
     public LuaConstLiteralExpression(string value, string identifierToken) : this(new LuaIdentifierLiteralExpressionSyntax(value), identifierToken) {
     }
 
-    public LuaConstLiteralExpression(LuaLiteralExpressionSyntax value, string identifierToken) {
+    public LuaConstLiteralExpression(LuaLiteralExpressionSyntax value, string identifierToken): base(value.line) {
       Value = value;
       IdentifierToken = identifierToken;
     }
@@ -155,23 +158,26 @@ namespace CSharpLua.LuaAst {
     public static readonly LuaNumberLiteralExpressionSyntax Zero = 0;
     public static readonly LuaNumberLiteralExpressionSyntax ZeroFloat = 0.0;
 
+    protected LuaNumberLiteralExpressionSyntax(int line) : base(line) {
+    }
+
     internal override void Render(LuaRenderer renderer) {
       renderer.Render(this);
     }
 
     public static implicit operator LuaNumberLiteralExpressionSyntax(float number) {
-      return new LuaFloatLiteralExpressionSyntax(number);
+      return new LuaFloatLiteralExpressionSyntax(number, -1);
     }
 
     public static implicit operator LuaNumberLiteralExpressionSyntax(double number) {
-      return new LuaDoubleLiteralExpressionSyntax(number);
+      return new LuaDoubleLiteralExpressionSyntax(number, -1);
     }
   }
 
   public sealed class LuaFloatLiteralExpressionSyntax : LuaNumberLiteralExpressionSyntax {
     private readonly float number_;
 
-    public LuaFloatLiteralExpressionSyntax(float number) {
+    public LuaFloatLiteralExpressionSyntax(float number, int line) : base(line) {
       number_ = number;
     }
 
@@ -191,7 +197,7 @@ namespace CSharpLua.LuaAst {
   public sealed class LuaDoubleLiteralExpressionSyntax : LuaNumberLiteralExpressionSyntax {
     public override double Number { get;}
 
-    public LuaDoubleLiteralExpressionSyntax(double number) {
+    public LuaDoubleLiteralExpressionSyntax(double number, int line) : base(line) {
       Number = number;
     }
 

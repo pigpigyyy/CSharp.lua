@@ -21,6 +21,10 @@ namespace CSharpLua.LuaAst {
     public string OpenParenToken => Tokens.OpenParentheses;
     public string CloseParenToken => Tokens.CloseParentheses;
     public readonly LuaSyntaxList<LuaIdentifierNameSyntax> Parameters = new();
+
+    public LuaParameterListSyntax(int line) : base(line) {
+    }
+
     public int Count => Parameters.Count;
 
     internal override void Render(LuaRenderer renderer) {
@@ -29,14 +33,19 @@ namespace CSharpLua.LuaAst {
   }
 
   public class LuaFunctionExpressionSyntax : LuaExpressionSyntax {
-    public readonly LuaParameterListSyntax ParameterList = new();
+    public readonly LuaParameterListSyntax ParameterList;
     public string FunctionKeyword => Keyword.Function;
     public int TempCount;
 
-    public readonly LuaBlockSyntax Body = new() {
-      OpenToken = Tokens.Empty,
-      CloseToken = Keyword.End,
-    };
+    public readonly LuaBlockSyntax Body;
+
+    public LuaFunctionExpressionSyntax(int line) : base(line) {
+      ParameterList = new(line);
+      Body = new(line) {
+        OpenToken = Tokens.Empty,
+        CloseToken = Keyword.End,
+      };
+    }
 
     public void AddParameter(LuaIdentifierNameSyntax parameter) {
       ParameterList.Parameters.Add(parameter);
@@ -60,20 +69,31 @@ namespace CSharpLua.LuaAst {
   }
 
   public sealed class LuaConstructorAdapterExpressionSyntax : LuaFunctionExpressionSyntax {
+    public LuaConstructorAdapterExpressionSyntax(int line) : base(line) {
+    }
+
     public bool IsInvokeThisCtor { get; set; }
     public bool IsStatic { get; set; }
   }
 
   public abstract class LuaCheckLoopControlExpressionSyntax : LuaFunctionExpressionSyntax {
+    protected LuaCheckLoopControlExpressionSyntax(int line) : base(line) {
+    }
+
     public bool HasReturn { get; set; }
     public bool HasBreak { get; set; }
     public bool HasContinue { get; set; }
   }
 
   public sealed class LuaTryAdapterExpressionSyntax : LuaCheckLoopControlExpressionSyntax {
+    public LuaTryAdapterExpressionSyntax(int line) : base(line) {
+    }
+
     public LuaIdentifierNameSyntax CatchTemp { get; set; }
   }
 
   public sealed class LuaUsingAdapterExpressionSyntax : LuaCheckLoopControlExpressionSyntax {
+    public LuaUsingAdapterExpressionSyntax(int line) : base(line) {
+    }
   }
 }

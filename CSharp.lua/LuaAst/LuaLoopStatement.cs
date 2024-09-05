@@ -24,19 +24,19 @@ namespace CSharpLua.LuaAst {
     public string InKeyword => Keyword.In;
     public LuaExpressionSyntax Placeholder => LuaIdentifierNameSyntax.Placeholder;
 
-    public LuaBlockSyntax Body { get; } = new() {
+    public LuaBlockSyntax Body { get; } = new(-1) {
       OpenToken = Keyword.Do,
       CloseToken = Keyword.End,
     };
 
-    public LuaForInStatementSyntax(LuaIdentifierNameSyntax identifier, LuaExpressionSyntax expression, bool isAsync = false) {
+    public LuaForInStatementSyntax(LuaIdentifierNameSyntax identifier, LuaExpressionSyntax expression, bool isAsync = false): base(expression.line) {
       if (expression == null) {
         throw new ArgumentNullException(nameof(expression));
       }
       Identifier = identifier ?? throw new ArgumentNullException(nameof(identifier));
       Expression = isAsync
-        ? new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.AsyncEach, LuaIdentifierNameSyntax.Async, expression)
-        : new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.Each, expression);
+        ? new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.AsyncEach, expression.line, LuaIdentifierNameSyntax.Async, expression)
+        : new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.Each, expression.line, expression);
     }
 
     internal override void Render(LuaRenderer renderer) {
@@ -52,12 +52,12 @@ namespace CSharpLua.LuaAst {
     public LuaExpressionSyntax LimitExpression { get; }
     public LuaExpressionSyntax StepExpression { get; }
 
-    public LuaBlockSyntax Body { get; } = new() {
+    public LuaBlockSyntax Body { get; } = new(-1) {
       OpenToken = Keyword.Do,
       CloseToken = Keyword.End,
     };
 
-    public LuaNumericalForStatementSyntax(LuaIdentifierNameSyntax identifier, LuaExpressionSyntax startExpression, LuaExpressionSyntax limitExpression, LuaExpressionSyntax stepExpression) {
+    public LuaNumericalForStatementSyntax(LuaIdentifierNameSyntax identifier, LuaExpressionSyntax startExpression, LuaExpressionSyntax limitExpression, LuaExpressionSyntax stepExpression): base(startExpression.line) {
       Identifier = identifier ?? throw new ArgumentNullException(nameof(identifier));
       StartExpression = startExpression ?? throw new ArgumentNullException(nameof(startExpression));
       LimitExpression = limitExpression ?? throw new ArgumentNullException(nameof(limitExpression));
@@ -73,12 +73,12 @@ namespace CSharpLua.LuaAst {
     public LuaExpressionSyntax Condition { get; }
     public string WhileKeyword => Keyword.While;
 
-    public LuaBlockSyntax Body { get; } = new() {
+    public LuaBlockSyntax Body { get; } = new(-1) {
       OpenToken = Keyword.Do,
       CloseToken = Keyword.End,
     };
 
-    public LuaWhileStatementSyntax(LuaExpressionSyntax condition) {
+    public LuaWhileStatementSyntax(LuaExpressionSyntax condition): base(condition.line) {
       Condition = condition ?? throw new ArgumentNullException(nameof(condition));
     }
 
@@ -93,9 +93,9 @@ namespace CSharpLua.LuaAst {
     public string UntilKeyword => Keyword.Until;
     public LuaBlockSyntax Body { get; }
 
-    public LuaRepeatStatementSyntax(LuaExpressionSyntax condition, LuaBlockSyntax body = null) {
+    public LuaRepeatStatementSyntax(LuaExpressionSyntax condition, LuaBlockSyntax body = null): base(condition.line) {
       Condition = condition ?? throw new ArgumentNullException(nameof(condition));
-      Body = body ?? new LuaBlockSyntax();
+      Body = body ?? new LuaBlockSyntax(condition.line);
     }
 
     internal override void Render(LuaRenderer renderer) {

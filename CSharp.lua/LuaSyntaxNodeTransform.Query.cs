@@ -95,7 +95,7 @@ namespace CSharpLua {
       } else {
         CheckLocalBadWord(ref name, identifier.Parent);
       }
-      var queryIdentifier = new QueryIdentifier(identifier, name);
+      var queryIdentifier = new QueryIdentifier(identifier, new LuaIdentifierNameSyntax(name, identifier.GetLocation().GetLineSpan().StartLinePosition.Line));
       queryIdentifiers_.Add(queryIdentifier);
       return queryIdentifier;
     }
@@ -120,7 +120,7 @@ namespace CSharpLua {
       var expression = node.Expression.AcceptExpression(this);
       if (node.Type != null) {
         var typeName = node.Type.AcceptExpression(this);
-        expression = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqCast, expression, typeName);
+        expression = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqCast, node.Expression.GetLocation().GetLineSpan().StartLinePosition.Line, expression, typeName);
       }
       return expression;
     }
@@ -154,7 +154,7 @@ namespace CSharpLua {
     }
 
     private LuaExpressionSyntax BuildQueryWhere(LuaExpressionSyntax collection, WhereClauseSyntax node, IQueryRangeVariable rangeVariable) {
-      var whereFunction = new LuaFunctionExpressionSyntax();
+      var whereFunction = new LuaFunctionExpressionSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
       PushFunction(whereFunction);
       var condition = node.Condition.AcceptExpression(this);
       if (condition == LuaIdentifierLiteralExpressionSyntax.True) {
@@ -164,19 +164,19 @@ namespace CSharpLua {
       whereFunction.AddParameter(rangeVariable.Name);
       whereFunction.AddStatement(new LuaReturnStatementSyntax(condition));
       PopFunction();
-      return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqWhere, collection, whereFunction);
+      return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqWhere, node.GetLocation().GetLineSpan().StartLinePosition.Line, collection, whereFunction);
     }
 
     private LuaExpressionSyntax BuildOrdering(LuaIdentifierNameSyntax methodName, LuaExpressionSyntax collection, OrderingSyntax node, IQueryRangeVariable rangeVariable) {
       var type = semanticModel_.GetTypeInfo(node.Expression).Type;
       var typeName = GetTypeName(type);
-      var keySelector = new LuaFunctionExpressionSyntax();
+      var keySelector = new LuaFunctionExpressionSyntax(rangeVariable.Name.line);
       PushFunction(keySelector);
       keySelector.AddParameter(rangeVariable.Name);
       var expression = node.Expression.AcceptExpression(this);
       keySelector.AddStatement(new LuaReturnStatementSyntax(expression));
       PopFunction();
-      return new LuaInvocationExpressionSyntax(methodName, collection, keySelector, LuaIdentifierNameSyntax.Nil, typeName);
+      return new LuaInvocationExpressionSyntax(methodName, node.GetLocation().GetLineSpan().StartLinePosition.Line, collection, keySelector, LuaIdentifierNameSyntax.Nil, typeName);
     }
 
     private LuaExpressionSyntax BuildQueryOrderBy(LuaExpressionSyntax collection, OrderByClauseSyntax node, IQueryRangeVariable rangeVariable) {
@@ -194,7 +194,7 @@ namespace CSharpLua {
     }
 
     private LuaExpressionSyntax BuildQuerySelect(LuaExpressionSyntax collection, SelectClauseSyntax node, IQueryRangeVariable rangeVariable) {
-      var selectFunction = new LuaFunctionExpressionSyntax();
+      var selectFunction = new LuaFunctionExpressionSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
       PushFunction(selectFunction);
       selectFunction.AddParameter(rangeVariable.Name);
 
@@ -210,27 +210,28 @@ namespace CSharpLua {
       PopFunction();
       var type = semanticModel_.GetTypeInfo(node.Expression).Type;
       var typeExpression = GetTypeName(type);
-      return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqSelect, collection, selectFunction, typeExpression);
+      return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqSelect, node.GetLocation().GetLineSpan().StartLinePosition.Line, collection, selectFunction, typeExpression);
     }
 
     private LuaExpressionSyntax BuildGroupClause(LuaExpressionSyntax collection, GroupClauseSyntax node, IQueryRangeVariable rangeVariable) {
       var keyType = semanticModel_.GetTypeInfo(node.ByExpression).Type;
       var keyTypeName = GetTypeName(keyType);
-      var keySelector = new LuaFunctionExpressionSyntax();
+      var line = node.GetLocation().GetLineSpan().StartLinePosition.Line;
+      var keySelector = new LuaFunctionExpressionSyntax(line);
       PushFunction(keySelector);
       keySelector.AddParameter(rangeVariable.Name);
       var byExpression = node.ByExpression.AcceptExpression(this);
       keySelector.AddStatement(new LuaReturnStatementSyntax(byExpression));
       PopFunction();
 
-      var elementSelector = new LuaFunctionExpressionSyntax();
+      var elementSelector = new LuaFunctionExpressionSyntax(line);
       PushFunction(elementSelector);
       elementSelector.AddParameter(rangeVariable.Name);
       var groupExpression = node.GroupExpression.AcceptExpression(this);
       if (node.GroupExpression.IsKind(SyntaxKind.IdentifierName)) {
         if (groupExpression is LuaIdentifierNameSyntax groupIdentifierName && groupIdentifierName.ValueText == rangeVariable.Name.ValueText) {
           PopFunction();
-          return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqGroupBy, collection, keySelector, keyTypeName);
+          return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqGroupBy, node.GetLocation().GetLineSpan().StartLinePosition.Line, collection, keySelector, keyTypeName);
         }
       }
       elementSelector.AddStatement(new LuaReturnStatementSyntax(groupExpression));
@@ -238,11 +239,11 @@ namespace CSharpLua {
 
       var elementType = semanticModel_.GetTypeInfo(node.GroupExpression).Type;
       var elementTypeName = GetTypeName(elementType);
-      return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqGroupBy, collection, keySelector, elementSelector, keyTypeName, elementTypeName);
+      return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqGroupBy, node.GetLocation().GetLineSpan().StartLinePosition.Line, collection, keySelector, elementSelector, keyTypeName, elementTypeName);
     }
 
     private LuaExpressionSyntax CreateQueryAnonymousType(LuaIdentifierNameSyntax key1, LuaExpressionSyntax value1, LuaIdentifierNameSyntax key2, LuaExpressionSyntax value2) {
-      LuaTableExpression table = new LuaTableExpression();
+      LuaTableExpression table = new LuaTableExpression(key1.line);
       table.Add(key1, value1);
       table.Add(key2, value2);
       return table;
@@ -253,7 +254,7 @@ namespace CSharpLua {
     }
 
     private LuaExpressionSyntax BuildFromClause(LuaExpressionSyntax collection, FromClauseSyntax node, ref IQueryRangeVariable rangeVariable, out bool isOver) {
-      var collectionSelector = new LuaFunctionExpressionSyntax();
+      var collectionSelector = new LuaFunctionExpressionSyntax(collection.line);
       PushFunction(collectionSelector);
       collectionSelector.AddParameter(rangeVariable.Name);
       var expression = node.Expression.AcceptExpression(this);
@@ -261,7 +262,7 @@ namespace CSharpLua {
       PopFunction();
 
       var rangeVariable2 = AddRangeIdentifier(node.Identifier);
-      var resultSelector = new LuaFunctionExpressionSyntax();
+      var resultSelector = new LuaFunctionExpressionSyntax(collection.line);
       PushFunction(resultSelector);
       resultSelector.AddParameter(rangeVariable.Name);
       resultSelector.AddParameter(rangeVariable2.Name);
@@ -282,11 +283,11 @@ namespace CSharpLua {
       }
       resultSelector.AddStatement(new LuaReturnStatementSyntax(resultSelectorExpression));
       PopFunction();
-      return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqSelectMany, collection, collectionSelector, resultSelector, resultSelectorType);
+      return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqSelectMany, node.GetLocation().GetLineSpan().StartLinePosition.Line, collection, collectionSelector, resultSelector, resultSelectorType);
     }
 
     private LuaExpressionSyntax BuildLetClause(LuaExpressionSyntax collection, LetClauseSyntax node, ref IQueryRangeVariable rangeVariable) {
-      var selectFunction = new LuaFunctionExpressionSyntax();
+      var selectFunction = new LuaFunctionExpressionSyntax(collection.line);
       PushFunction(selectFunction);
       selectFunction.AddParameter(rangeVariable.Name);
 
@@ -297,7 +298,7 @@ namespace CSharpLua {
       PopFunction();
 
       rangeVariable = new QueryPackVariable(rangeVariable, letRangeVariable);
-      return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqSelect, collection, selectFunction, LuaIdentifierNameSyntax.AnonymousType);
+      return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.LinqSelect, node.GetLocation().GetLineSpan().StartLinePosition.Line, collection, selectFunction, LuaIdentifierNameSyntax.AnonymousType);
     }
 
     private bool BuildQueryJoin(JoinClauseSyntax node, out LuaExpressionSyntax resultSelectorExpression, out LuaExpressionSyntax resultSelectorType, ref IQueryRangeVariable rangeVariable, QueryIdentifier queryIdentifier) {
@@ -319,7 +320,7 @@ namespace CSharpLua {
     private LuaExpressionSyntax BuildJoinClause(LuaExpressionSyntax collection, JoinClauseSyntax node, ref IQueryRangeVariable rangeVariable, out bool isOver) {
       var rangeVariable2 = AddRangeIdentifier(node.Identifier);
       var inner = node.InExpression.AcceptExpression(this);
-      var outerKeySelector = new LuaFunctionExpressionSyntax();
+      var outerKeySelector = new LuaFunctionExpressionSyntax(collection.line);
       PushFunction(outerKeySelector);
       outerKeySelector.AddParameter(rangeVariable.Name);
       var left = node.LeftExpression.AcceptExpression(this);
@@ -329,14 +330,14 @@ namespace CSharpLua {
       var keyTypeSymbol = semanticModel_.GetTypeInfo(node.LeftExpression).Type;
       var keyType = GetTypeName(keyTypeSymbol);
 
-      var innerKeySelector = new LuaFunctionExpressionSyntax();
+      var innerKeySelector = new LuaFunctionExpressionSyntax(collection.line);
       PushFunction(innerKeySelector);
       innerKeySelector.AddParameter(rangeVariable2.Name);
       var right = node.RightExpression.AcceptExpression(this);
       innerKeySelector.AddStatement(new LuaReturnStatementSyntax(right));
       PopFunction();
 
-      var resultSelector = new LuaFunctionExpressionSyntax();
+      var resultSelector = new LuaFunctionExpressionSyntax(collection.line);
       PushFunction(resultSelector);
       LuaExpressionSyntax resultSelectorExpression;
       LuaExpressionSyntax resultSelectorType;
@@ -356,7 +357,7 @@ namespace CSharpLua {
       }
       resultSelector.AddStatement(new LuaReturnStatementSyntax(resultSelectorExpression));
       PopFunction();
-      return new LuaInvocationExpressionSyntax(methodName, collection, inner, outerKeySelector, innerKeySelector, resultSelector, LuaIdentifierLiteralExpressionSyntax.Nil, keyType, resultSelectorType);
+      return new LuaInvocationExpressionSyntax(methodName, node.GetLocation().GetLineSpan().StartLinePosition.Line, collection, inner, outerKeySelector, innerKeySelector, resultSelector, LuaIdentifierLiteralExpressionSyntax.Nil, keyType, resultSelectorType);
     }
 
     private LuaExpressionSyntax BuildQueryBody(LuaExpressionSyntax collection, QueryBodySyntax node, IQueryRangeVariable rangeVariable) {

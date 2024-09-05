@@ -25,10 +25,10 @@ namespace CSharpLua.LuaAst {
     public string CloseBraceToken => Tokens.CloseBrace;
     public bool IsSingleLine { get; set; }
 
-    public LuaTableExpression() {
+    public LuaTableExpression(int line): base(line) {
     }
 
-    public LuaTableExpression(IEnumerable<LuaExpressionSyntax> expressions) {
+    public LuaTableExpression(IEnumerable<LuaExpressionSyntax> expressions): base(-1) {
       Items.AddRange(expressions.Select(i => new LuaSingleTableItemSyntax(i)));
     }
 
@@ -48,7 +48,7 @@ namespace CSharpLua.LuaAst {
       renderer.Render(this);
     }
 
-    public static readonly LuaTableExpression Empty = new();
+    public static readonly LuaTableExpression Empty = new(-1);
 
     public LuaExpressionSyntax GetSingleExpression(int index) {
       var item = (LuaSingleTableItemSyntax)Items[index];
@@ -57,12 +57,14 @@ namespace CSharpLua.LuaAst {
   }
 
   public abstract class LuaTableItemSyntax : LuaSyntaxNode {
+    protected LuaTableItemSyntax(int line) : base(line) {
+    }
   }
 
   public sealed class LuaSingleTableItemSyntax : LuaTableItemSyntax {
     public LuaExpressionSyntax Expression { get; }
 
-    public LuaSingleTableItemSyntax(LuaExpressionSyntax expression) {
+    public LuaSingleTableItemSyntax(LuaExpressionSyntax expression): base(expression.line) {
       Expression = expression ?? throw new ArgumentNullException(nameof(expression));
     }
 
@@ -72,6 +74,8 @@ namespace CSharpLua.LuaAst {
   }
 
   public abstract class LuaTableKeySyntax : LuaSyntaxNode {
+    protected LuaTableKeySyntax(int line) : base(line) {
+    }
   }
 
   public sealed class LuaTableExpressionKeySyntax : LuaTableKeySyntax {
@@ -79,7 +83,7 @@ namespace CSharpLua.LuaAst {
     public string OpenBracketToken => Tokens.OpenBracket;
     public string CloseBracketToken => Tokens.CloseBracket;
 
-    public LuaTableExpressionKeySyntax(LuaExpressionSyntax expression) {
+    public LuaTableExpressionKeySyntax(LuaExpressionSyntax expression): base(expression.line) {
       Expression = expression ?? throw new ArgumentNullException(nameof(expression));
     }
 
@@ -91,7 +95,7 @@ namespace CSharpLua.LuaAst {
   public sealed class LuaTableLiteralKeySyntax : LuaTableKeySyntax {
     public LuaIdentifierNameSyntax Identifier { get; }
 
-    public LuaTableLiteralKeySyntax(LuaIdentifierNameSyntax identifier) {
+    public LuaTableLiteralKeySyntax(LuaIdentifierNameSyntax identifier): base(identifier.line) {
       Identifier = identifier;
     }
 
@@ -105,7 +109,7 @@ namespace CSharpLua.LuaAst {
     public string OperatorToken => Tokens.Equals;
     public LuaExpressionSyntax Value { get; }
 
-    public LuaKeyValueTableItemSyntax(LuaTableKeySyntax key, LuaExpressionSyntax value) {
+    public LuaKeyValueTableItemSyntax(LuaTableKeySyntax key, LuaExpressionSyntax value): base(key.line) {
       Key = key;
       Value = value;
     }
@@ -124,7 +128,7 @@ namespace CSharpLua.LuaAst {
     public string OpenBracketToken => Tokens.OpenBracket;
     public string CloseBracketToken => Tokens.CloseBracket;
 
-    public LuaTableIndexAccessExpressionSyntax(LuaExpressionSyntax expression, LuaExpressionSyntax index) {
+    public LuaTableIndexAccessExpressionSyntax(LuaExpressionSyntax expression, LuaExpressionSyntax index): base(expression.line) {
       Expression = expression ?? throw new ArgumentNullException(nameof(expression));
       Index = index ?? throw new ArgumentNullException(nameof(index));
     }

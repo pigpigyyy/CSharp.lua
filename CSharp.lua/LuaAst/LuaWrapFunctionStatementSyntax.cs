@@ -19,7 +19,10 @@ using System.Collections.Generic;
 namespace CSharpLua.LuaAst {
   public abstract class LuaWrapFunctionStatementSyntax : LuaStatementSyntax {
     public LuaExpressionStatementSyntax Statement { get; private set; }
-    private readonly LuaFunctionExpressionSyntax function_ = new();
+    private readonly LuaFunctionExpressionSyntax function_ = new(-1);
+
+    protected LuaWrapFunctionStatementSyntax(int line) : base(line) {
+    }
 
     protected void UpdateIdentifiers(LuaIdentifierNameSyntax name, LuaIdentifierNameSyntax target, LuaIdentifierNameSyntax memberName, LuaIdentifierNameSyntax parameter = null) {
       var invoke = target.MemberAccess(memberName).Invocation();
@@ -57,7 +60,7 @@ namespace CSharpLua.LuaAst {
   }
 
   public sealed class LuaNamespaceDeclarationSyntax : LuaWrapFunctionStatementSyntax {
-    public LuaNamespaceDeclarationSyntax(LuaIdentifierNameSyntax name, bool isContained = false) {
+    public LuaNamespaceDeclarationSyntax(LuaIdentifierNameSyntax name, bool isContained = false): base(name.line) {
       UpdateIdentifiers(name, isContained ? LuaIdentifierNameSyntax.Namespace : LuaIdentifierNameSyntax.System, LuaIdentifierNameSyntax.Namespace, LuaIdentifierNameSyntax.Namespace);
     }
   }

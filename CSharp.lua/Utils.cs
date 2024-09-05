@@ -302,7 +302,7 @@ namespace CSharpLua {
     }
 
     public static LuaStringLiteralExpressionSyntax ToStringLiteral(this string s) {
-      return new(s);
+      return new(new LuaIdentifierNameSyntax(s, -1));
     }
 
     public static bool IsPrivate(this ISymbol symbol) {
@@ -646,11 +646,11 @@ namespace CSharpLua {
 
     public static bool IsTypeDeclaration(this SyntaxKind kind) {
       return kind switch {
-        SyntaxKind.ClassDeclaration 
-        or SyntaxKind.StructDeclaration 
-        or SyntaxKind.InterfaceDeclaration 
-        or SyntaxKind.EnumDeclaration 
-        or SyntaxKind.RecordDeclaration 
+        SyntaxKind.ClassDeclaration
+        or SyntaxKind.StructDeclaration
+        or SyntaxKind.InterfaceDeclaration
+        or SyntaxKind.EnumDeclaration
+        or SyntaxKind.RecordDeclaration
         or SyntaxKind.RecordStructDeclaration => true,
         _ => false,
       };
@@ -1331,7 +1331,7 @@ namespace CSharpLua {
     public static bool HasNoInliningAttribute(this ISymbol symbol) {
       return symbol.GetAttributes().Any(i => i.IsMethodImplOptions(MethodImplOptions.NoInlining));
     }
-    
+
     private static bool IsMethodImplOptions(this AttributeData attributeData, MethodImplOptions option) {
       if (attributeData.AttributeClass.IsMethodImplAttribute()) {
         foreach (var constructorArgument in attributeData.ConstructorArguments) {
@@ -1475,7 +1475,7 @@ namespace CSharpLua {
 
       methodSymbol = null;
       return false;
-    } 
+    }
 
     public static bool IsNil(this LuaExpressionSyntax expression) {
       return expression == null || expression == LuaIdentifierNameSyntax.Nil || expression == LuaIdentifierLiteralExpressionSyntax.Nil;

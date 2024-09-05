@@ -222,7 +222,7 @@ namespace CSharpLua {
       int index = CurFunction.TempCount++;
       string name = LuaSyntaxNode.TempIdentifiers.GetOrDefault(index) ?? $"__temp{index - LuaSyntaxNode.TempIdentifiers.Length}__";
       ++CurBlock.TempCount;
-      return name;
+      return new LuaIdentifierNameSyntax(name, -1);
     }
 
     private void ReleaseTempIdentifiers(int prevTempCount, int prevReleaseCount) {
@@ -282,7 +282,7 @@ namespace CSharpLua {
       var symbol = (INamespaceSymbol)semanticModel_.GetDeclaredSymbol(node);
       bool isContained = node.Parent.IsKind(SyntaxKind.NamespaceDeclaration);
       string name = generator_.GetNamespaceDefineName(symbol, node);
-      var namespaceDeclaration = new LuaNamespaceDeclarationSyntax(name, isContained);
+      var namespaceDeclaration = new LuaNamespaceDeclarationSyntax(new LuaIdentifierNameSyntax(name, node.GetLocation().GetLineSpan().StartLinePosition.Line), isContained);
       var statements = VisitTriviaAndNode(node, node.Members);
       namespaceDeclaration.AddStatements(statements);
       return namespaceDeclaration;
@@ -403,7 +403,7 @@ namespace CSharpLua {
       CheckParameterCtor(typeSymbol, node, typeDeclaration);
       BuildTypeMembers(typeDeclaration, node);
       CheckTypeDeclaration(typeSymbol, typeDeclaration, attributes);
-  
+
       typeDeclarations_.Pop();
       CurCompilationUnit.AddTypeDeclarationCount();
     }
@@ -418,7 +418,7 @@ namespace CSharpLua {
           if (isNeedCallBase) {
             var baseCtorInvoke = BuildCallBaseConstructor(typeSymbol);
             if (baseCtorInvoke != null) {
-              var function = new LuaConstructorAdapterExpressionSyntax();
+              var function = new LuaConstructorAdapterExpressionSyntax(baseCtorInvoke.line);
               function.AddParameter(LuaIdentifierNameSyntax.This);
               function.AddStatement(baseCtorInvoke);
               typeDeclaration.AddCtor(function, false);
@@ -426,7 +426,7 @@ namespace CSharpLua {
           }
         }
       } else if (typeSymbol.IsValueType && !typeSymbol.IsCombineImplicitlyCtor()) {
-        var function = new LuaConstructorAdapterExpressionSyntax();
+        var function = new LuaConstructorAdapterExpressionSyntax(typeDeclaration.line);
         function.AddParameter(LuaIdentifierNameSyntax.This);
         typeDeclaration.AddCtor(function, true);
       }
@@ -449,9 +449,9 @@ namespace CSharpLua {
       }
 
       if (IsCurTypeExportMetadataAll || attributes.Count > 0 || typeDeclaration.IsExportMetadata) {
-        var data = new LuaTableExpression { IsSingleLine = true };
-        data.Add(new LuaStringLiteralExpressionSyntax(typeSymbol.Name));
-        data.Add(typeSymbol.GetMetaDataAttributeFlags());
+        var data = new LuaTableExpression(typeDeclaration.line) { IsSingleLine = true };
+        data.Add(new LuaStringLiteralExpressionSyntax(new LuaIdentifierNameSyntax(typeSymbol.Name, typeDeclaration.line)));
+        data.Add(new LuaIdentifierNameSyntax(typeSymbol.GetMetaDataAttributeFlags(), typeDeclaration.line));
         data.AddRange(typeDeclaration.TypeParameterExpressions);
         data.AddRange(attributes);
         typeDeclaration.AddClassMetaData(data);
@@ -467,7 +467,7 @@ namespace CSharpLua {
     private void BuildParameterCtor(INamedTypeSymbol typeSymbol, LuaTypeDeclarationSyntax typeDeclaration, TypeDeclarationSyntax node) {
       bool isRecord = node.IsKind(SyntaxKind.RecordDeclaration);
       var parameterList = node!.ParameterList.Accept<LuaParameterListSyntax>(this);
-      var function = new LuaConstructorAdapterExpressionSyntax();
+      var function = new LuaConstructorAdapterExpressionSyntax(typeDeclaration.line);
       function.AddParameter(LuaIdentifierNameSyntax.This);
       function.AddParameters(parameterList.Parameters);
       typeDeclaration.AddCtor(function, false);
@@ -491,7 +491,7 @@ namespace CSharpLua {
       var properties = typeSymbol.GetMembers().OfType<IPropertySymbol>().Skip(skipCount);
       var expressions = new List<LuaExpressionSyntax> { typeSymbol.Name.ToStringLiteral() };
       expressions.AddRange(properties.Select(i => GetMemberName(i).ToStringLiteral()));
-      var function = new LuaFunctionExpressionSyntax();
+      var function = new LuaFunctionExpressionSyntax(typeDeclaration.line);
       function.AddStatement(new LuaReturnStatementSyntax(expressions));
       typeDeclaration.AddMethod(LuaIdentifierNameSyntax.RecordMembers, function, false);
     }
@@ -625,8 +625,8 @@ namespace CSharpLua {
     private void VisitYield(IMethodSymbol symbol, LuaFunctionExpressionSyntax function) {
       var returnTypeSymbol = (INamedTypeSymbol)symbol.ReturnType;
       string name = LuaSyntaxNode.Tokens.Yield + returnTypeSymbol.Name;
-      var invokeExpression = LuaIdentifierNameSyntax.System.MemberAccess(name).Invocation();
-      var wrapFunction = new LuaFunctionExpressionSyntax();
+      var invokeExpression = LuaIdentifierNameSyntax.System.MemberAccess(new LuaIdentifierNameSyntax(name, function.line)).Invocation();
+      var wrapFunction = new LuaFunctionExpressionSyntax(function.line);
       if (symbol.IsAsync) {
         wrapFunction.AddParameter(LuaIdentifierNameSyntax.Async);
       }
@@ -651,7 +651,7 @@ namespace CSharpLua {
 
     private void VisitAsync(bool returnsVoid, LuaFunctionExpressionSyntax function) {
       var invokeExpression = LuaIdentifierNameSyntax.System.MemberAccess(LuaIdentifierNameSyntax.Async).Invocation();
-      var wrapFunction = new LuaFunctionExpressionSyntax();
+      var wrapFunction = new LuaFunctionExpressionSyntax(function.line);
 
       var parameters = function.ParameterList.Parameters;
       wrapFunction.AddParameter(LuaIdentifierNameSyntax.Async);
@@ -681,9 +681,9 @@ namespace CSharpLua {
     }
 
     private void AddMethodMetaData(MethodDeclarationResult result, bool isMoreThanLocalVariables = false) {
-      var table = new LuaTableExpression { IsSingleLine = true };
-      table.Add(new LuaStringLiteralExpressionSyntax(result.Symbol.Name));
-      table.Add(result.Symbol.GetMetaDataAttributeFlags());
+      var table = new LuaTableExpression(result.Name.line) { IsSingleLine = true };
+      table.Add(new LuaStringLiteralExpressionSyntax(new LuaIdentifierNameSyntax(result.Symbol.Name, result.Name.line)));
+      table.Add(new LuaIdentifierNameSyntax(result.Symbol.GetMetaDataAttributeFlags(), result.Name.line));
       if (isMoreThanLocalVariables) {
         table.Add(LuaIdentifierNameSyntax.MoreManyLocalVarTempTable.MemberAccess(result.Name));
       } else {
@@ -694,8 +694,8 @@ namespace CSharpLua {
         parameters.Add(GetTypeNameOfMetadata(result.Symbol.ReturnType));
       }
       if (result.Symbol.IsGenericMethod) {
-        var function = new LuaFunctionExpressionSyntax();
-        function.AddParameters(result.Symbol.TypeParameters.Select(i => (LuaIdentifierNameSyntax)i.Name));
+        var function = new LuaFunctionExpressionSyntax(result.Name.line);
+        function.AddParameters(result.Symbol.TypeParameters.Select(i => new LuaIdentifierNameSyntax(i.Name, result.Name.line)));
         function.AddStatement(new LuaReturnStatementSyntax(parameters));
         table.Add(function);
       } else {
@@ -721,7 +721,7 @@ namespace CSharpLua {
       var methodName = symbol.MethodKind == MethodKind.LocalFunction
         ? GetLocalMethodName(symbol, node)
         : GetMemberName(symbol);
-      LuaFunctionExpressionSyntax function = new LuaFunctionExpressionSyntax();
+      LuaFunctionExpressionSyntax function = new LuaFunctionExpressionSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
       PushFunction(function);
 
       var document = BuildDocumentationComment(node);
@@ -747,7 +747,7 @@ namespace CSharpLua {
         if (parameterNode.Modifiers.IsOutOrRef()) {
           refOrOutParameters.Add(parameter);
         } else if (parameterNode.Modifiers.IsParams() && symbol.HasParamsAttribute()) {
-          function.ParameterList.Parameters[^1] = LuaSyntaxNode.Tokens.Params;
+          function.ParameterList.Parameters[^1] = new LuaIdentifierNameSyntax(LuaSyntaxNode.Tokens.Params, parameter.line);
         }
       }
 
@@ -828,7 +828,7 @@ namespace CSharpLua {
       var typeName = GetTypeName(typeSymbol);
       var field = typeSymbol.GetMembers().OfType<IFieldSymbol>().FirstOrDefault(i => i.ConstantValue.Equals(0));
       if (field != null) {
-        return typeName.MemberAccess(field.Name);
+        return typeName.MemberAccess(new LuaIdentifierNameSyntax(field.Name, -1));
       }
       return typeName.Invocation(LuaNumberLiteralExpressionSyntax.Zero);
     }
@@ -877,13 +877,13 @@ namespace CSharpLua {
     }
 
     private static LuaInvocationExpressionSyntax BuildDefaultValue(LuaExpressionSyntax typeExpression) {
-      return new(LuaIdentifierNameSyntax.SystemDefault, typeExpression);
+      return new(LuaIdentifierNameSyntax.SystemDefault, typeExpression.line, typeExpression);
     }
 
     private void AddFieldMetaData(IFieldSymbol symbol, LuaIdentifierNameSyntax fieldName, List<LuaExpressionSyntax> attributes) {
-      var data = new LuaTableExpression { IsSingleLine = true };
-      data.Add(new LuaStringLiteralExpressionSyntax(symbol.Name));
-      data.Add(symbol.GetMetaDataAttributeFlags());
+      var data = new LuaTableExpression(fieldName.line) { IsSingleLine = true };
+      data.Add(new LuaStringLiteralExpressionSyntax(new LuaIdentifierNameSyntax(symbol.Name, fieldName.line)));
+      data.Add(new LuaIdentifierNameSyntax(symbol.GetMetaDataAttributeFlags(), fieldName.line));
       data.Add(GetTypeNameOfMetadata(symbol.Type));
       if (generator_.IsNeedRefactorName(symbol)) {
         data.Add(new LuaStringLiteralExpressionSyntax(fieldName));
@@ -972,7 +972,7 @@ namespace CSharpLua {
       statements = null;
 
       if (expression != null && !expression.IsKind(SyntaxKind.NullLiteralExpression)) {
-        var function = new LuaFunctionExpressionSyntax();
+        var function = new LuaFunctionExpressionSyntax(expression.GetLocation().GetLineSpan().StartLinePosition.Line);
         PushFunction(function);
         valueExpression = VisitExpression(expression);
         PopFunction();
@@ -1023,9 +1023,9 @@ namespace CSharpLua {
       } else {
         kind = set != null ? PropertyMethodKind.SetOnly : PropertyMethodKind.Field;
       }
-      var data = new LuaTableExpression { IsSingleLine = true };
-      data.Add(new LuaStringLiteralExpressionSyntax(symbol.Name));
-      data.Add(symbol.GetMetaDataAttributeFlags(kind));
+      var data = new LuaTableExpression(name.line) { IsSingleLine = true };
+      data.Add(new LuaStringLiteralExpressionSyntax(new LuaIdentifierNameSyntax(symbol.Name, name.line)));
+      data.Add(new LuaIdentifierNameSyntax(symbol.GetMetaDataAttributeFlags(kind), name.line));
       var type = isProperty ? ((IPropertySymbol)symbol).Type : ((IEventSymbol)symbol).Type;
       data.Add(GetTypeNameOfMetadata(type));
       if (kind == PropertyMethodKind.Field) {
@@ -1037,7 +1037,7 @@ namespace CSharpLua {
           if (get.Attributes.IsNullOrEmpty()) {
             data.Add(get.Name);
           } else {
-            var getTable = new LuaTableExpression();
+            var getTable = new LuaTableExpression(get.Name.line);
             getTable.Add(get.Name);
             getTable.AddRange(get.Attributes);
             data.Add(getTable);
@@ -1047,7 +1047,7 @@ namespace CSharpLua {
           if (set.Attributes.IsNullOrEmpty()) {
             data.Add(set.Name);
           } else {
-            var setTable = new LuaTableExpression();
+            var setTable = new LuaTableExpression(set.Name.line);
             setTable.Add(set.Name);
             setTable.AddRange(set.Attributes);
             data.Add(setTable);
@@ -1080,7 +1080,7 @@ namespace CSharpLua {
               var methodInfo = new MethodInfo(accessorSymbol);
               methodInfos_.Push(methodInfo);
               bool isGet = accessor.IsKind(SyntaxKind.GetAccessorDeclaration);
-              var functionExpression = new LuaFunctionExpressionSyntax();
+              var functionExpression = new LuaFunctionExpressionSyntax(accessor.GetLocation().GetLineSpan().StartLinePosition.Line);
               if (!isStatic) {
                 functionExpression.AddParameter(LuaIdentifierNameSyntax.This);
               }
@@ -1125,7 +1125,7 @@ namespace CSharpLua {
           Contract.Assert(!hasGet);
           methodInfos_.Push(new MethodInfo(symbol.GetMethod));
           var name = new LuaPropertyOrEventIdentifierNameSyntax(true, propertyName);
-          var functionExpression = new LuaFunctionExpressionSyntax();
+          var functionExpression = new LuaFunctionExpressionSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
           PushFunction(functionExpression);
           var expression = node.ExpressionBody.AcceptExpression(this);
           PopFunction();
@@ -1185,7 +1185,7 @@ namespace CSharpLua {
         PropertyMethodResult removeMethod = null;
         foreach (var accessor in node.AccessorList.Accessors) {
           var methodAttributes = BuildAttributes(accessor.AttributeLists);
-          var functionExpression = new LuaFunctionExpressionSyntax();
+          var functionExpression = new LuaFunctionExpressionSyntax(accessor.GetLocation().GetLineSpan().StartLinePosition.Line);
           if (!isStatic) {
             functionExpression.AddParameter(LuaIdentifierNameSyntax.This);
           }
@@ -1224,7 +1224,7 @@ namespace CSharpLua {
     public override LuaSyntaxNode VisitEnumMemberDeclaration(EnumMemberDeclarationSyntax node) {
       IFieldSymbol symbol = semanticModel_.GetDeclaredSymbol(node);
       Contract.Assert(symbol.HasConstantValue);
-      LuaIdentifierNameSyntax identifier = node.Identifier.ValueText;
+      LuaIdentifierNameSyntax identifier = new(node.Identifier.ValueText, node.GetLocation().GetLineSpan().StartLinePosition.Line);
       var attributes = BuildAttributes(node.AttributeLists);
       if (IsCurTypeSerializable || attributes.Count > 0 || CurTypeSymbol.HasMetadataAttribute()) {
         AddFieldMetaData(symbol, identifier, attributes);
@@ -1243,7 +1243,7 @@ namespace CSharpLua {
         void Fill(IMethodSymbol accessorSymbol, Action<LuaFunctionExpressionSyntax, LuaPropertyOrEventIdentifierNameSyntax> action) {
           var methodInfo = new MethodInfo(accessorSymbol);
           methodInfos_.Push(methodInfo);
-          var function = new LuaFunctionExpressionSyntax();
+          var function = new LuaFunctionExpressionSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
           function.AddParameter(LuaIdentifierNameSyntax.This);
           function.ParameterList.Parameters.AddRange(parameterList.Parameters);
           var name = new LuaPropertyOrEventIdentifierNameSyntax(true, indexName);
@@ -1295,7 +1295,7 @@ namespace CSharpLua {
     }
 
     private LuaSyntaxNode BuildParameterList(SeparatedSyntaxList<ParameterSyntax> parameters) {
-      var parameterList = new LuaParameterListSyntax();
+      var parameterList = new LuaParameterListSyntax(parameters.Count > 0 ? parameters[0].GetLocation().GetLineSpan().StartLinePosition.Line : -1);
       foreach (var parameter in parameters) {
         var newNode = parameter.Accept<LuaIdentifierNameSyntax>(this);
         parameterList.Parameters.Add(newNode);
@@ -1304,7 +1304,7 @@ namespace CSharpLua {
     }
 
     public override LuaSyntaxNode VisitParameter(ParameterSyntax node) {
-      LuaIdentifierNameSyntax identifier = node.Identifier.ValueText;
+      LuaIdentifierNameSyntax identifier = new(node.Identifier.ValueText, node.GetLocation().GetLineSpan().StartLinePosition.Line);
       CheckLocalVariableName(ref identifier, node);
       return identifier;
     }
@@ -1342,7 +1342,7 @@ namespace CSharpLua {
           }
           int count = LineSpan.StartLinePosition.Line - lastLine - 1;
           if (count > 0) {
-            statement = new LuaBlankLinesStatement(count);
+            statement = new LuaBlankLinesStatement(count, LineSpan.StartLinePosition.Line);
           }
         }
         lastLine = LineSpan.EndLinePosition.Line;
@@ -1371,7 +1371,7 @@ namespace CSharpLua {
         switch (SyntaxTrivia.Kind()) {
           case SyntaxKind.SingleLineCommentTrivia: {
             string commentContent = content[kCommentCharCount..];
-            return new LuaShortCommentStatement(commentContent);
+            return new LuaShortCommentStatement(commentContent, -1);
           }
           case SyntaxKind.MultiLineCommentTrivia: {
             string commentContent = content[kCommentCharCount..^kCommentCharCount];
@@ -1387,7 +1387,7 @@ namespace CSharpLua {
           }
           case SyntaxKind.RegionDirectiveTrivia:
           case SyntaxKind.EndRegionDirectiveTrivia: {
-            return new LuaShortCommentStatement(content);
+            return new LuaShortCommentStatement(content, -1);
           }
           default:
             throw new InvalidOperationException();
@@ -1414,7 +1414,7 @@ namespace CSharpLua {
             if (end != -1) {
               string codeString = commentContent[begin..end];
               string[] lines = codeString.Split('\n');
-              var codeLines = new LuaStatementListSyntax();
+              var codeLines = new LuaStatementListSyntax(-1);
               int indent = -1;
               foreach (string line in lines) {
                 if (!string.IsNullOrWhiteSpace(line)) {
@@ -1423,7 +1423,7 @@ namespace CSharpLua {
                   }
                   int space = line.IndexOf(i => !char.IsWhiteSpace(i));
                   string code = space >= indent && indent != -1 ? line[indent..] : line;
-                  codeLines.Statements.Add((LuaIdentifierNameSyntax)code);
+                  codeLines.Statements.Add(new LuaIdentifierNameSyntax(code, -1));
                 }
               }
               statement = codeLines;
@@ -1466,7 +1466,7 @@ namespace CSharpLua {
     }
 
     public override LuaSyntaxNode VisitBlock(BlockSyntax node) {
-      LuaBlockStatementSyntax block = new LuaBlockStatementSyntax();
+      LuaBlockStatementSyntax block = new LuaBlockStatementSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
       PushBlock(block);
 
       var statements = VisitTriviaAndNode(node, node.Statements);
@@ -1504,7 +1504,7 @@ namespace CSharpLua {
       var curMethodInfo = CurMethodInfoOrNull;
       if (curMethodInfo != null && curMethodInfo.RefOrOutParameters.Count > 0) {
         if (curMethodInfo.IsInlining) {
-          var multipleAssignment = new LuaMultipleAssignmentExpressionSyntax();
+          var multipleAssignment = new LuaMultipleAssignmentExpressionSyntax(expression?.line ?? -1);
           multipleAssignment.Lefts.AddRange(curMethodInfo.InliningReturnVars);
           if (expression != null) {
             multipleAssignment.Rights.Add(expression);
@@ -1512,7 +1512,7 @@ namespace CSharpLua {
           multipleAssignment.Rights.AddRange(curMethodInfo.RefOrOutParameters);
           result = multipleAssignment;
         } else {
-          var returnStatement = new LuaReturnStatementSyntax();
+          var returnStatement = new LuaReturnStatementSyntax(expression?.line ?? -1);
           if (expression != null) {
             returnStatement.Expressions.Add(expression);
           }
@@ -1524,7 +1524,7 @@ namespace CSharpLua {
           Contract.Assert(curMethodInfo.InliningReturnVars.Count == 1);
           var assignment = curMethodInfo.InliningReturnVars.First().Assignment(expression);
           if (node != null && !IsLastStatement(node)) {
-            var statements = new LuaStatementListSyntax();
+            var statements = new LuaStatementListSyntax(assignment.line);
             statements.Statements.Add(assignment);
             statements.Statements.Add(new LuaGotoStatement(LuaIdentifierNameSyntax.InlineReturnLabel));
             result = statements;
@@ -1545,7 +1545,7 @@ namespace CSharpLua {
       if (node.Parent.IsKind(SyntaxKind.Block) && node.Parent.Parent is MemberDeclarationSyntax) {
         var block = (BlockSyntax)node.Parent;
         if (block.Statements.Last() != node) {
-          var blockStatement = new LuaBlockStatementSyntax();
+          var blockStatement = new LuaBlockStatementSyntax(result.line);
           blockStatement.Statements.Add(result);
           result = blockStatement;
         } else if (expression == null) {
@@ -1578,7 +1578,7 @@ namespace CSharpLua {
         var getter = propertyAdapter.GetCloneOfGet();
         LuaExpressionSyntax leftExpression = getter;
         if (isPreventDebugConcatenation) {
-          leftExpression = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.SystemToString, leftExpression);
+          leftExpression = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.SystemToString, leftExpression.line, leftExpression);
         }
         if (parent != null) {
           expression = GetUserDefinedOperatorExpression(parent, leftExpression, right);
@@ -1590,7 +1590,7 @@ namespace CSharpLua {
         LuaExpressionSyntax expression = null;
         LuaExpressionSyntax leftExpression = left;
         if (isPreventDebugConcatenation) {
-          leftExpression = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.SystemToString, leftExpression);
+          leftExpression = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.SystemToString, leftExpression.line, leftExpression);
         }
         if (parent != null) {
           expression = GetUserDefinedOperatorExpression(parent, leftExpression, right);
@@ -1618,7 +1618,7 @@ namespace CSharpLua {
     private LuaExpressionSyntax BuildDelegateBinaryExpression(LuaExpressionSyntax left, LuaExpressionSyntax right, bool isPlus) {
       if (IsPreventDebug) {
         var methodName = isPlus ? LuaIdentifierNameSyntax.DelegateCombine : LuaIdentifierNameSyntax.DelegateRemove;
-        return new LuaInvocationExpressionSyntax(methodName, left, right);
+        return new LuaInvocationExpressionSyntax(methodName, left.line, left, right);
       }
 
       var operatorToken = isPlus ? LuaSyntaxNode.Tokens.Plus : LuaSyntaxNode.Tokens.Sub;
@@ -1649,15 +1649,15 @@ namespace CSharpLua {
 
     private LuaExpressionSyntax BuildBinaryInvokeAssignmentExpression(LuaExpressionSyntax left, LuaExpressionSyntax right, LuaExpressionSyntax methodName) {
       if (left is LuaPropertyTemplateExpressionSyntax propertyTemplate) {
-        var invocation = new LuaInvocationExpressionSyntax(methodName, propertyTemplate.GetExpression, right);
+        var invocation = new LuaInvocationExpressionSyntax(methodName, left.line, propertyTemplate.GetExpression, right);
         var arguments = propertyTemplate.GetArguments(invocation);
         return BuildCodeTemplateExpression(propertyTemplate.SetTemplate, arguments, propertyTemplate.Name);
       } else if (left is LuaPropertyAdapterExpressionSyntax propertyAdapter) {
-        var invocation = new LuaInvocationExpressionSyntax(methodName, propertyAdapter.GetCloneOfGet(), right);
+        var invocation = new LuaInvocationExpressionSyntax(methodName, left.line, propertyAdapter.GetCloneOfGet(), right);
         propertyAdapter.ArgumentList.AddArgument(invocation);
         return propertyAdapter;
       } else {
-        var invocation = new LuaInvocationExpressionSyntax(methodName, left, right);
+        var invocation = new LuaInvocationExpressionSyntax(methodName, left.line, left, right);
         return left.Assignment(invocation);
       }
     }
@@ -1720,7 +1720,7 @@ namespace CSharpLua {
       var identifiers = BuildNumberNullableIdentifiers(ref left, ref right, isLeftNullable, isRightNullable);
       LuaExpressionSyntax expression;
       if (method != null) {
-        expression = new LuaInvocationExpressionSyntax(method, left, right);
+        expression = new LuaInvocationExpressionSyntax(method, left.line, left, right);
       } else {
         expression = left.Binary(operatorToken, right);
         CheckNumberNullableCompareExpression(operatorToken, identifiers);
@@ -1979,7 +1979,7 @@ namespace CSharpLua {
       }
       var ifStatement = new LuaIfStatementSyntax(identifier.EqualsEquals(LuaIdentifierNameSyntax.Nil));
       ifStatement.Body.AddStatement(temp.Assignment(right.Binary(boolOperatorToken, identifier)));
-      ifStatement.Else = new LuaElseClauseSyntax();
+      ifStatement.Else = new LuaElseClauseSyntax(right.line);
       ifStatement.Else.Body.AddStatement(temp.Assignment(identifier.Binary(boolOperatorToken, right)));
       CurBlock.AddStatement(ifStatement);
       return BuildLuaSimpleAssignmentExpression(left, temp);
@@ -2046,7 +2046,7 @@ namespace CSharpLua {
       }
 
       assignments.Reverse();
-      LuaLineMultipleExpressionSyntax multipleAssignment = new LuaLineMultipleExpressionSyntax();
+      LuaLineMultipleExpressionSyntax multipleAssignment = new LuaLineMultipleExpressionSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
       multipleAssignment.Assignments.AddRange(assignments);
       return multipleAssignment;
     }
@@ -2143,9 +2143,10 @@ namespace CSharpLua {
     }
 
     private LuaExpressionSyntax BuildInvokeRefOrOut(CSharpSyntaxNode node, LuaExpressionSyntax invocation, IEnumerable<RefOrOutArgument> refOrOutArguments) {
-      var locals = new LuaLocalVariablesSyntax();
-      var multipleAssignment = new LuaMultipleAssignmentExpressionSyntax();
-      var propertyStatements = new LuaStatementListSyntax();
+      var line = node.GetLocation().GetLineSpan().StartLinePosition.Line;
+      var locals = new LuaLocalVariablesSyntax(line);
+      var multipleAssignment = new LuaMultipleAssignmentExpressionSyntax(line);
+      var propertyStatements = new LuaStatementListSyntax(line);
 
       void FillRefOrOutArguments() {
         foreach (var refOrOutArgument in refOrOutArguments) {
@@ -2357,41 +2358,41 @@ namespace CSharpLua {
       return arguments;
     }
 
-    private LuaInvocationExpressionSyntax CheckInvocationExpression(IMethodSymbol symbol, LuaExpressionSyntax expression) {
+    private LuaInvocationExpressionSyntax CheckInvocationExpression(IMethodSymbol symbol, LuaExpressionSyntax expression, int line) {
       LuaInvocationExpressionSyntax invocation;
       if (symbol is {IsExtensionMethod: true}) {
         if (expression is LuaMemberAccessExpressionSyntax memberAccess) {
           if (memberAccess.Name is LuaInternalMethodExpressionSyntax) {
-            invocation = new LuaInvocationExpressionSyntax(memberAccess.Name);
+            invocation = new LuaInvocationExpressionSyntax(memberAccess.Name, line);
             invocation.AddArgument(memberAccess.Expression);
           } else if (symbol.ReducedFrom != null) {
             invocation = BuildExtensionMethodInvocation(symbol.ReducedFrom, memberAccess.Expression);
           } else {
-            invocation = new LuaInvocationExpressionSyntax(expression);
+            invocation = new LuaInvocationExpressionSyntax(expression, line);
           }
         } else {
-          invocation = new LuaInvocationExpressionSyntax(expression);
+          invocation = new LuaInvocationExpressionSyntax(expression, line);
         }
       } else {
         if (expression is LuaMemberAccessExpressionSyntax memberAccess) {
           if (memberAccess.Name is LuaInternalMethodExpressionSyntax) {
-            invocation = new LuaInvocationExpressionSyntax(memberAccess.Name);
+            invocation = new LuaInvocationExpressionSyntax(memberAccess.Name, line);
             invocation.AddArgument(memberAccess.Expression);
           } else {
-            invocation = new LuaInvocationExpressionSyntax(memberAccess);
+            invocation = new LuaInvocationExpressionSyntax(memberAccess, line);
             if (IsPreventDebug && symbol is {IsStatic: false}) {
               var containingType = symbol.ContainingType;
               if (containingType.IsBasicType()) {
                 var typeName = GetTypeName(containingType);
                 invocation = typeName.MemberAccess(memberAccess.Name).Invocation(memberAccess.Expression);
               } else if (containingType.SpecialType == SpecialType.System_Object || containingType.IsBasicTypInterface()) {
-                var methodMemberAccess = LuaIdentifierNameSyntax.System.MemberAccess(new LuaCodeTemplateExpressionSyntax(symbol.ContainingType.Name, memberAccess.Name));
+                var methodMemberAccess = LuaIdentifierNameSyntax.System.MemberAccess(new LuaCodeTemplateExpressionSyntax(new LuaIdentifierNameSyntax(symbol.ContainingType.Name, line), memberAccess.Name));
                 invocation = methodMemberAccess.Invocation(memberAccess.Expression);
               }
             }
           }
         } else {
-          invocation = new LuaInvocationExpressionSyntax(expression);
+          invocation = new LuaInvocationExpressionSyntax(expression, line);
           if (expression is LuaInternalMethodExpressionSyntax) {
             if (!symbol.IsStatic) {
               invocation.AddArgument(LuaIdentifierNameSyntax.This);
@@ -2424,7 +2425,7 @@ namespace CSharpLua {
 
       var arguments = BuildInvocationArguments(symbol, node, out var refOrOutArguments);
       var expression = node.Expression.AcceptExpression(this);
-      var invocation = CheckInvocationExpression(symbol, expression);
+      var invocation = CheckInvocationExpression(symbol, expression, node.GetLocation().GetLineSpan().StartLinePosition.Line);
       invocation.AddArguments(arguments);
       LuaExpressionSyntax resultExpression = invocation;
       if (symbol != null && symbol.HasAggressiveInliningAttribute()) {
@@ -2731,7 +2732,7 @@ namespace CSharpLua {
       return symbol.Kind switch {
         SymbolKind.Property or SymbolKind.Event =>
           BuildFieldOrPropertyMemberAccessExpression(expression, name, symbol.IsStatic),
-        
+
         SymbolKind.Method when IsDelegateExpression((IMethodSymbol)symbol, node, name, expression, out var delegateExpression) =>
           delegateExpression,
 
@@ -2771,7 +2772,7 @@ namespace CSharpLua {
         var expressSymbol = semanticModel_.GetSymbolInfo(node.Expression).Symbol;
         var expression = node.Expression.AcceptExpression(this);
         bool isObjectColon = node.Parent.IsKind(SyntaxKind.InvocationExpression) && expressSymbol.Kind != SymbolKind.NamedType;
-        LuaIdentifierNameSyntax name = node.Name.Identifier.ValueText;
+        LuaIdentifierNameSyntax name = new(node.Name.Identifier.ValueText, node.Name.Identifier.GetLocation().GetLineSpan().StartLinePosition.Line);
         return expression.MemberAccess(name, isObjectColon);
       }
 
@@ -3009,7 +3010,7 @@ namespace CSharpLua {
       }
 
       public LuaExpressionSyntax Build(LuaSyntaxNodeTransform transform) {
-        return IsTypeParameter ? TypeParameterIndex.ToString() : transform.GetTypeName(Symbol);
+        return IsTypeParameter ? new LuaIdentifierNameSyntax(TypeParameterIndex.ToString(), -1) : transform.GetTypeName(Symbol);
       }
 
       public static void Swap(List<GenericPlaceholder> placeholders, int x, int y) {
@@ -3148,11 +3149,12 @@ namespace CSharpLua {
             }
           }
 
+          var line = node.GetLocation().GetLineSpan().StartLinePosition.Line;
           if (GenericPlaceholder.IsEnable(placeholders)) {
             if (placeholders.TrueForAll(i => !i.IsTypeParameter)) {
               if (placeholders.Count <= 3) {
                 string bindMethodName = LuaIdentifierNameSyntax.DelegateBind.ValueText + placeholders.Count;
-                var invocationExpression = new LuaInvocationExpressionSyntax(bindMethodName, nameExpression);
+                var invocationExpression = new LuaInvocationExpressionSyntax(new LuaIdentifierNameSyntax(bindMethodName, line), line, nameExpression);
                 invocationExpression.AddArguments(placeholders.Select(i => i.Build(this)));
                 nameExpression = invocationExpression;
                 return;
@@ -3163,19 +3165,19 @@ namespace CSharpLua {
                 case 2 when placeholders[0].TypeParameterIndex == 2 && placeholders[1].TypeParameterIndex == 1:
                 {
                   string bindMethodName = LuaIdentifierNameSyntax.DelegateBind.ValueText + "2_1";
-                  nameExpression = new LuaInvocationExpressionSyntax(bindMethodName, nameExpression);
+                  nameExpression = new LuaInvocationExpressionSyntax(new LuaIdentifierNameSyntax(bindMethodName, line), line, nameExpression);
                   return;
                 }
                 case 1 when placeholders.First().TypeParameterIndex == 2:
                 {
                   string bindMethodName = LuaIdentifierNameSyntax.DelegateBind.ValueText + "0_2";
-                  nameExpression = new LuaInvocationExpressionSyntax(bindMethodName, nameExpression);
+                  nameExpression = new LuaInvocationExpressionSyntax(new LuaIdentifierNameSyntax(bindMethodName, line), line, nameExpression);
                   return;
                 }
               }
             }
 
-            var invocation = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.DelegateBind, nameExpression, symbol.Parameters.Length.ToString());
+            var invocation = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.DelegateBind, line, nameExpression, new LuaIdentifierNameSyntax(symbol.Parameters.Length.ToString(), line));
             invocation.AddArguments(placeholders.Select(i => i.Build(this)));
             nameExpression = invocation;
           }
@@ -3186,7 +3188,7 @@ namespace CSharpLua {
     private LuaExpressionSyntax BuildDelegateNameExpression(IMethodSymbol symbol, LuaExpressionSyntax target, LuaExpressionSyntax name, CSharpSyntaxNode node) {
       var nameExpression = symbol.IsStatic
         ? name
-        : new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.DelegateMake, target, name);
+        : new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.DelegateMake, node.GetLocation().GetLineSpan().StartLinePosition.Line, target, name);
       CheckDelegateBind(symbol, node, ref nameExpression);
       return nameExpression;
     }
@@ -3272,7 +3274,7 @@ namespace CSharpLua {
 
     public override LuaSyntaxNode VisitIdentifierName(IdentifierNameSyntax node) {
       LuaIdentifierNameSyntax GetSampleName(ISymbol nodeSymbol) {
-        LuaIdentifierNameSyntax nameIdentifier = nodeSymbol.Name;
+        LuaIdentifierNameSyntax nameIdentifier = new(nodeSymbol.Name, node.GetLocation().GetLineSpan().StartLinePosition.Line);
         CheckLocalSymbolName(nodeSymbol, ref nameIdentifier);
         return nameIdentifier;
       }
@@ -3280,7 +3282,7 @@ namespace CSharpLua {
       SymbolInfo symbolInfo = semanticModel_.GetSymbolInfo(node);
       ISymbol symbol = symbolInfo.Symbol;
       if (symbol == null) {  // dynamic
-        return (LuaIdentifierNameSyntax)node.Identifier.ValueText;
+        return new LuaIdentifierNameSyntax(node.Identifier.ValueText, node.Identifier.GetLocation().GetLineSpan().StartLinePosition.Line);
       }
 
       LuaExpressionSyntax identifier;
@@ -3313,7 +3315,7 @@ namespace CSharpLua {
         }
         case SymbolKind.TypeParameter:
         case SymbolKind.Label: {
-          identifier = symbol.Name;
+          identifier = new LuaIdentifierNameSyntax(symbol.Name, node.GetLocation().GetLineSpan().StartLinePosition.Line);
           break;
         }
         case SymbolKind.NamedType: {
@@ -3401,7 +3403,7 @@ namespace CSharpLua {
     }
 
     private LuaArgumentListSyntax BuildArgumentList(SeparatedSyntaxList<ArgumentSyntax> arguments) {
-      var argumentList = new LuaArgumentListSyntax();
+      var argumentList = new LuaArgumentListSyntax(arguments.Count > 0 ? arguments[0].GetLocation().GetLineSpan().StartLinePosition.Line : -1);
       foreach (var argument in arguments) {
         var newNode = argument.AcceptExpression(this);
         argumentList.Arguments.Add(newNode);
@@ -3544,7 +3546,7 @@ namespace CSharpLua {
 
     public override LuaSyntaxNode VisitVariableDeclaration(VariableDeclarationSyntax node) {
       ITypeSymbol typeSymbol = null;
-      var variableListDeclaration = new LuaVariableListDeclarationSyntax();
+      var variableListDeclaration = new LuaVariableListDeclarationSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
       foreach (var variable in node.Variables) {
         bool isRefIgnore = false;
         if (variable.Initializer != null && variable.Initializer.Value.IsKind(SyntaxKind.RefExpression)) {
@@ -3588,7 +3590,7 @@ namespace CSharpLua {
 
       bool isMultiNil = variableListDeclaration.Variables.Count > 0 && variableListDeclaration.Variables.All(i => i.Initializer == null);
       if (isMultiNil) {
-        LuaLocalVariablesSyntax declarationStatement = new LuaLocalVariablesSyntax();
+        LuaLocalVariablesSyntax declarationStatement = new LuaLocalVariablesSyntax(variableListDeclaration.line);
         foreach (var variable in variableListDeclaration.Variables) {
           declarationStatement.Variables.Add(variable.Identifier);
         }
@@ -3599,7 +3601,7 @@ namespace CSharpLua {
     }
 
     public override LuaSyntaxNode VisitVariableDeclarator(VariableDeclaratorSyntax node) {
-      LuaIdentifierNameSyntax identifier = node.Identifier.ValueText;
+      LuaIdentifierNameSyntax identifier = new(node.Identifier.ValueText, node.Identifier.GetLocation().GetLineSpan().StartLinePosition.Line);
       CheckLocalVariableName(ref identifier, node);
       var variable = new LuaVariableDeclaratorSyntax(identifier);
       if (node.Initializer != null) {
@@ -3646,7 +3648,7 @@ namespace CSharpLua {
       if (node.Statement.IsKind(SyntaxKind.IfStatement)) {
         var ifStatement = (IfStatementSyntax)node.Statement;
 
-        LuaBlockSyntax conditionBody = new LuaBlockSyntax();
+        LuaBlockSyntax conditionBody = new LuaBlockSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
         PushBlock(conditionBody);
         var condition = VisitExpression(ifStatement.Condition);
         PopBlock();
@@ -3658,7 +3660,7 @@ namespace CSharpLua {
           ifStatement.Else?.Accept(this);
           return elseIfStatement;
         } else {
-          var elseClause = new LuaElseClauseSyntax();
+          var elseClause = new LuaElseClauseSyntax(conditionBody.line);
           elseClause.Body.Statements.AddRange(conditionBody.Statements);
           var elseIfStatement = new LuaIfStatementSyntax(condition);
           WriteStatementOrBlock(ifStatement.Statement, elseIfStatement.Body);
@@ -3672,7 +3674,7 @@ namespace CSharpLua {
       }
 
       {
-        LuaElseClauseSyntax elseClause = new LuaElseClauseSyntax();
+        LuaElseClauseSyntax elseClause = new LuaElseClauseSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
         WriteStatementOrBlock(node.Statement, elseClause.Body);
         ifStatements_.Peek().Else = elseClause;
         return elseClause;
@@ -3680,7 +3682,7 @@ namespace CSharpLua {
     }
 
     public override LuaSyntaxNode VisitSwitchStatement(SwitchStatementSyntax node) {
-      var switchStatement = new LuaSwitchAdapterStatementSyntax();
+      var switchStatement = new LuaSwitchAdapterStatementSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
       switches_.Push(switchStatement);
       PushBlock(switchStatement.Body);
       var expression = node.Expression.AcceptExpression(this);
@@ -3712,7 +3714,7 @@ namespace CSharpLua {
     public override LuaSyntaxNode VisitSwitchSection(SwitchSectionSyntax node) {
       bool isDefault = node.Labels.Any(i => i.Kind() == SyntaxKind.DefaultSwitchLabel);
       if (isDefault) {
-        var block = new LuaBlockSyntax();
+        var block = new LuaBlockSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
         FillSwitchSectionStatements(block, node);
         return block;
       }
@@ -3729,7 +3731,7 @@ namespace CSharpLua {
       var symbol = semanticModel_.GetSymbolInfo(node.Value).Symbol;
       if (symbol?.Kind == SymbolKind.NamedType) {
         var switchStatement = (SwitchStatementSyntax)FindParent(node, SyntaxKind.SwitchStatement);
-        return BuildTypePattern(node.Value, left, switchStatement.Expression, null); 
+        return BuildTypePattern(node.Value, left, switchStatement.Expression, null);
       } else {
         var right = node.Value.AcceptExpression(this);
         return left.EqualsEquals(right);
@@ -3765,8 +3767,8 @@ namespace CSharpLua {
       }
 
       return BuildSwitchLabelWhenClause(isExpression, whenClause);
-    } 
-    
+    }
+
     public override LuaSyntaxNode VisitCasePatternSwitchLabel(CasePatternSwitchLabelSyntax node) {
       var left = switches_.Peek().Temp;
       switch (node.Pattern.Kind()) {
@@ -3843,11 +3845,11 @@ namespace CSharpLua {
       if (deconstruct == null) {
         var typeSymbol = semanticModel_.GetTypeInfo(type).Type;
         var deconstructInvocation = BuildDeconstructExpression(typeSymbol, identifier, type);
-        deconstruct = new LuaLocalVariablesSyntax();
+        deconstruct = new LuaLocalVariablesSyntax(deconstruct.line);
         for (int i = 0; i < count; ++i) {
           deconstruct.Variables.Add(GetTempIdentifier());
         }
-        deconstruct.Initializer = new LuaEqualsValueClauseListSyntax();
+        deconstruct.Initializer = new LuaEqualsValueClauseListSyntax(deconstruct.line);
         deconstruct.Initializer.Values.Add(deconstructInvocation);
       }
     }
@@ -3932,11 +3934,11 @@ namespace CSharpLua {
       if (node.GoverningExpression.IsKind(SyntaxKind.TupleExpression)) {
         governingIdentifier = null;
         var invocation = (LuaInvocationExpressionSyntax)governingExpression;
-        deconstruct = new LuaLocalVariablesSyntax();
+        deconstruct = new LuaLocalVariablesSyntax(governingExpression.line);
         for (int i = 0; i < invocation.ArgumentList.Arguments.Count; ++i) {
           deconstruct.Variables.Add(GetTempIdentifier());
         }
-        deconstruct.Initializer = new LuaEqualsValueClauseListSyntax();
+        deconstruct.Initializer = new LuaEqualsValueClauseListSyntax(governingExpression.line);
         deconstruct.Initializer.Values.AddRange(invocation.ArgumentList.Arguments);
       } else {
         governingIdentifier = GetTempIdentifier();
@@ -3985,10 +3987,10 @@ namespace CSharpLua {
           case SyntaxKind.OrPattern: {
             var condition = BuildPatternExpression(governingIdentifier, arm.Pattern, node.GoverningExpression);
             FillSwitchPatternSyntax(ref ifStatement, condition, arm.WhenClause, result, arm.Expression);
-            break; 
+            break;
           }
           case SyntaxKind.DiscardPattern: {
-            var elseClause = new LuaElseClauseSyntax();
+            var elseClause = new LuaElseClauseSyntax(arm.GetLocation().GetLineSpan().StartLinePosition.Line);
             PushBlock(elseClause.Body);
             var rightExpression = arm.Expression.AcceptExpression(this);
             PopBlock();
@@ -4003,8 +4005,8 @@ namespace CSharpLua {
       }
 
       if (ifStatement.Else == null) {
-        var elseClause = new LuaElseClauseSyntax();
-        elseClause.Body.AddStatement(LuaIdentifierNameSyntax.Throw.Invocation(kNewSwitchExpressionException));
+        var elseClause = new LuaElseClauseSyntax(ifStatement.line);
+        elseClause.Body.AddStatement(LuaIdentifierNameSyntax.Throw.Invocation(new LuaIdentifierNameSyntax(kNewSwitchExpressionException, ifStatement.line)));
         ifStatement.Else = elseClause;
       }
 
@@ -4080,7 +4082,7 @@ namespace CSharpLua {
       }
 
       if (CheckBreakLastBlockStatement(node)) {
-        var blockStatement = new LuaBlockStatementSyntax();
+        var blockStatement = new LuaBlockStatementSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
         blockStatement.Statements.Add(LuaBreakStatementSyntax.Instance);
         return blockStatement;
       }
@@ -4091,7 +4093,7 @@ namespace CSharpLua {
     private LuaExpressionSyntax BuildEnumToStringExpression(ITypeSymbol typeInfo, bool isNullable, LuaExpressionSyntax original, ExpressionSyntax node) {
       if (original is LuaLiteralExpressionSyntax) {
         var symbol = semanticModel_.GetSymbolInfo(node).Symbol;
-        return new LuaConstLiteralExpression(new LuaStringLiteralExpressionSyntax(symbol!.Name), typeInfo.ToString());
+        return new LuaConstLiteralExpression(new LuaStringLiteralExpressionSyntax(new LuaIdentifierNameSyntax(symbol!.Name, node.GetLocation().GetLineSpan().StartLinePosition.Line)), typeInfo.ToString());
       }
 
       AddExportEnum(typeInfo);
@@ -4108,7 +4110,7 @@ namespace CSharpLua {
       var original = expression.AcceptExpression(this);
       switch (typeInfo.SpecialType) {
         case SpecialType.System_String: {
-            if ((IsPreventDebug 
+            if ((IsPreventDebug
               && !expression.IsKind(SyntaxKind.AddExpression)
               && !expression.IsKind(SyntaxKind.StringLiteralExpression)) || alignment != null) {
               return FormatAlignment(original, null, alignment);
@@ -4122,7 +4124,7 @@ namespace CSharpLua {
             string text = SyntaxFactory.Literal((char)constValue.Value).Text;
             return new LuaIdentifierLiteralExpressionSyntax(text);
           }
-          return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.StringChar, original);
+          return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.StringChar, expression.GetLocation().GetLineSpan().StartLinePosition.Line, original);
         }
         case SpecialType.System_Boolean: {
           if (IsPreventDebug || alignment != null) {
@@ -4194,7 +4196,7 @@ namespace CSharpLua {
     private LuaExpressionSyntax BuildBinaryInvokeExpression(BinaryExpressionSyntax node, LuaExpressionSyntax name) {
       var left = node.Left.AcceptExpression(this);
       var right = node.Right.AcceptExpression(this);
-      return new LuaInvocationExpressionSyntax(name, left, right);
+      return new LuaInvocationExpressionSyntax(name, node.GetLocation().GetLineSpan().StartLinePosition.Line, left, right);
     }
 
     private LuaBinaryExpressionSyntax BuildBinaryExpression(BinaryExpressionSyntax node, string operatorToken) {
@@ -4241,7 +4243,7 @@ namespace CSharpLua {
       var identifier = BuildNullableExpressionIdentifier(left, new List<LuaExpressionSyntax>());
       var ifStatement = new LuaIfStatementSyntax(identifier.EqualsEquals(LuaIdentifierNameSyntax.Nil));
       ifStatement.Body.AddStatement(temp.Assignment(right.Binary(boolOperatorToken, identifier)));
-      ifStatement.Else = new LuaElseClauseSyntax();
+      ifStatement.Else = new LuaElseClauseSyntax(right.line);
       ifStatement.Else.Body.AddStatement(temp.Assignment(identifier.Binary(boolOperatorToken, right)));
       CurBlock.AddStatement(ifStatement);
       return temp;
@@ -4288,7 +4290,7 @@ namespace CSharpLua {
 
     private LuaExpressionSyntax BuildLogicOrBinaryExpression(BinaryExpressionSyntax node) {
       var left = VisitExpression(node.Left);
-      LuaBlockSyntax rightBody = new LuaBlockSyntax();
+      LuaBlockSyntax rightBody = new LuaBlockSyntax(left.line);
       PushBlock(rightBody);
       var right = VisitExpression(node.Right);
       if (rightBody.Statements.Count == 0) {
@@ -4302,7 +4304,7 @@ namespace CSharpLua {
       LuaIfStatementSyntax leftIfStatement = new LuaIfStatementSyntax(left);
       CurBlock.Statements.Add(leftIfStatement);
       leftIfStatement.Body.AddStatement(temp.Assignment(LuaIdentifierNameSyntax.True));
-      leftIfStatement.Else = new LuaElseClauseSyntax();
+      leftIfStatement.Else = new LuaElseClauseSyntax(rightBody.line);
       leftIfStatement.Else.Body.Statements.AddRange(rightBody.Statements);
       LuaIfStatementSyntax rightIfStatement = new LuaIfStatementSyntax(right);
       leftIfStatement.Else.Body.AddStatement(rightIfStatement);
@@ -4313,7 +4315,7 @@ namespace CSharpLua {
     private LuaExpressionSyntax BuildLogicAndBinaryExpression(BinaryExpressionSyntax node) {
       var temp = GetTempIdentifier();
       var left = VisitExpression(node.Left);
-      LuaBlockSyntax rightBody = new LuaBlockSyntax();
+      LuaBlockSyntax rightBody = new LuaBlockSyntax(left.line);
       PushBlock(rightBody);
       var right = VisitExpression(node.Right);
       PopBlock();
@@ -4498,7 +4500,7 @@ namespace CSharpLua {
           if (rightType.IsNullableType(out var nullElementType)) {
             var left = node.Left.AcceptExpression(this);
             var right = GetTypeName(nullElementType);
-            return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.Is, left, right);
+            return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.Is, node.GetLocation().GetLineSpan().StartLinePosition.Line, left, right);
           }
 
           var leftType = semanticModel_.GetTypeInfo(node.Left).Type;
@@ -4534,7 +4536,7 @@ namespace CSharpLua {
           if (rightType.IsNullableType()) {
             right = ((LuaInvocationExpressionSyntax)right).Arguments.First();
           }
-          return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.As, left, right);
+          return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.As, node.GetLocation().GetLineSpan().StartLinePosition.Line, left, right);
         }
         case SyntaxKind.LogicalOrExpression: {
           return BuildLogicOrBinaryExpression(node);
@@ -4545,7 +4547,7 @@ namespace CSharpLua {
         case SyntaxKind.CoalesceExpression: {
           var left = node.Left.AcceptExpression(this);
           var temp = GetTempIdentifier();
-          var block = new LuaBlockSyntax();
+          var block = new LuaBlockSyntax(node.Right.GetLocation().GetLineSpan().StartLinePosition.Line);
           PushBlock(block);
           var right = node.Right.AcceptExpression(this);
           PopBlock();
@@ -4608,7 +4610,7 @@ namespace CSharpLua {
             CurBlock.AddStatement(new LuaLocalVariableDeclaratorSyntax(temp));
             var ifStatement = new LuaIfStatementSyntax(identifiers.Aggregate((x, y) => x.And(y)));
             ifStatement.Body.AddStatement(temp.Assignment(operatorExpression));
-            ifStatement.Else = new LuaElseClauseSyntax();
+            ifStatement.Else = new LuaElseClauseSyntax(ifStatement.line);
             LuaExpressionSyntax right;
             if (node.IsKind(SyntaxKind.EqualsExpression)) {
               if (identifiers.Count == 1) {
@@ -4751,7 +4753,7 @@ namespace CSharpLua {
         var identifier = BuildNullableExpressionIdentifier(operand, new List<LuaExpressionSyntax>());
         result = operatorToken != null
           ? identifier.And(new LuaPrefixUnaryExpressionSyntax(identifier, operatorToken))
-          : identifier.And(new LuaInvocationExpressionSyntax(method, identifier));
+          : identifier.And(new LuaInvocationExpressionSyntax(method, node.GetLocation().GetLineSpan().StartLinePosition.Line, identifier));
         return true;
       }
       result = null;
@@ -4766,7 +4768,7 @@ namespace CSharpLua {
         if (v.HasValue && (int)v.Value > 0) {
           return new LuaPrefixUnaryExpressionSyntax(expression, LuaSyntaxNode.Tokens.Sub);
         }
-        return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.Index, expression, LuaIdentifierNameSyntax.True);
+        return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.Index, node.GetLocation().GetLineSpan().StartLinePosition.Line, expression, LuaIdentifierNameSyntax.True);
       }
 
       if (IsUserDefinedOperator(node, out var methodSymbol)) {
@@ -4942,7 +4944,7 @@ namespace CSharpLua {
         var check = (LuaCheckLoopControlExpressionSyntax)CurFunction;
         check.HasContinue = true;
       }
-      return new LuaContinueAdapterStatementSyntax(isWithinTry);
+      return new LuaContinueAdapterStatementSyntax(isWithinTry, node.GetLocation().GetLineSpan().StartLinePosition.Line);
     }
 
     private static bool IsLastBreakStatement(LuaStatementSyntax lastStatement) {
@@ -4997,13 +4999,13 @@ namespace CSharpLua {
         }
       }
       if (hasCast) {
-        var cast = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.Cast, GetTypeName(targetType), identifier);
+        var cast = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.Cast, node.GetLocation().GetLineSpan().StartLinePosition.Line, GetTypeName(targetType), identifier);
         forInStatement.Body.AddStatement(identifier.Assignment(cast));
       }
     }
 
     public override LuaSyntaxNode VisitForEachStatement(ForEachStatementSyntax node) {
-      LuaIdentifierNameSyntax identifier = node.Identifier.ValueText;
+      LuaIdentifierNameSyntax identifier = new(node.Identifier.ValueText, node.Identifier.GetLocation().GetLineSpan().StartLinePosition.Line);
       CheckLocalVariableName(ref identifier, node);
       var expression = node.Expression.AcceptExpression(this);
       bool isAsync = node.AwaitKeyword.IsKind(SyntaxKind.AwaitKeyword);
@@ -5027,7 +5029,7 @@ namespace CSharpLua {
     }
 
     private LuaWhileStatementSyntax BuildWhileStatement(ExpressionSyntax nodeCondition, StatementSyntax nodeStatement) {
-      LuaBlockSyntax conditionBody = new LuaBlockSyntax();
+      LuaBlockSyntax conditionBody = new LuaBlockSyntax(nodeCondition.GetLocation().GetLineSpan().StartLinePosition.Line);
       PushBlock(conditionBody);
       var condition = nodeCondition != null ? VisitExpression(nodeCondition) : LuaIdentifierNameSyntax.True;
       PopBlock();
@@ -5059,7 +5061,7 @@ namespace CSharpLua {
         return numericalForStatement;
       }
 
-      LuaBlockSyntax forBlock = new LuaBlockStatementSyntax();
+      LuaBlockSyntax forBlock = new LuaBlockStatementSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
       PushBlock(forBlock);
 
       if (node.Declaration != null) {
@@ -5081,7 +5083,7 @@ namespace CSharpLua {
     }
 
     public override LuaSyntaxNode VisitDoStatement(DoStatementSyntax node) {
-      LuaBlockSyntax body = new LuaBlockSyntax();
+      LuaBlockSyntax body = new LuaBlockSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
       PushBlock(body);
       VisitLoopBody(node.Statement, body);
       var condition = VisitExpression(node.Condition);
@@ -5097,10 +5099,10 @@ namespace CSharpLua {
       var curMethod = CurMethodInfoOrNull;
       curMethod.HasYield = true;
       if (node.IsKind(SyntaxKind.YieldBreakStatement)) {
-        return new LuaReturnStatementSyntax();
+        return new LuaReturnStatementSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
       }
 
-      string yieldToken = node!.YieldKeyword.ValueText;
+      var yieldToken = new LuaIdentifierNameSyntax(node!.YieldKeyword.ValueText, node.GetLocation().GetLineSpan().StartLinePosition.Line);
       var expression = VisitExpression(node.Expression);
       LuaExpressionSyntax targetMethod = curMethod.Symbol.IsAsync
         ? LuaIdentifierNameSyntax.Async.MemberAccess(yieldToken, true)
@@ -5132,7 +5134,7 @@ namespace CSharpLua {
         PopBlock();
         ifStatement.Body.AddStatement(temp.Assignment(whenTrue));
 
-        LuaElseClauseSyntax elseClause = new LuaElseClauseSyntax();
+        LuaElseClauseSyntax elseClause = new LuaElseClauseSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
         PushBlock(elseClause.Body);
         var whenFalse = VisitExpression(node.WhenFalse);
         PopBlock();
@@ -5163,7 +5165,7 @@ namespace CSharpLua {
         var labelIdentifier = switchStatement.CaseLabels.GetOrDefault(caseIndex);
         if (labelIdentifier == null) {
           string uniqueName = GetUniqueIdentifier(kCaseLabel + caseIndex, node);
-          labelIdentifier = uniqueName;
+          labelIdentifier = new(uniqueName, node.GetLocation().GetLineSpan().StartLinePosition.Line);
           switchStatement.CaseLabels.Add(caseIndex, labelIdentifier);
         }
         return new LuaGotoCaseAdapterStatement(labelIdentifier);
@@ -5172,7 +5174,7 @@ namespace CSharpLua {
       if (node.CaseOrDefaultKeyword.IsKind(SyntaxKind.DefaultKeyword)) {
         const string kDefaultLabel = "defaultLabel";
         var switchStatement = switches_.Peek();
-        switchStatement.DefaultLabel ??= GetUniqueIdentifier(kDefaultLabel, node);
+        switchStatement.DefaultLabel ??= new(GetUniqueIdentifier(kDefaultLabel, node), node.GetLocation().GetLineSpan().StartLinePosition.Line);
         return new LuaGotoCaseAdapterStatement(switchStatement.DefaultLabel);
       }
 
@@ -5184,7 +5186,7 @@ namespace CSharpLua {
       string label = node.Identifier.ValueText;
       CheckLabelJumpLocalVariables(label);
       var luaStatement = node.Statement.Accept<LuaStatementSyntax>(this);
-      return new LuaLabeledStatement(label, luaStatement);
+      return new LuaLabeledStatement(new LuaIdentifierNameSyntax(label, node.GetLocation().GetLineSpan().StartLinePosition.Line), luaStatement);
     }
 
     private void CheckLabelJumpLocalVariables(string label) {
@@ -5198,7 +5200,7 @@ namespace CSharpLua {
           if (statement is LuaLocalDeclarationStatementSyntax declaration) {
             LuaStatementSyntax replace = null;
             if (declaration.Declaration is LuaVariableListDeclarationSyntax variableList) {
-              var multipleAssignment = new LuaMultipleAssignmentExpressionSyntax();
+              var multipleAssignment = new LuaMultipleAssignmentExpressionSyntax(declaration.line);
               foreach (var variable in variableList.Variables) {
                 jumpLocalVariables.Add(variable.Identifier);
                 if (variable.Initializer != null) {
@@ -5377,7 +5379,7 @@ namespace CSharpLua {
 
     private LuaExpressionSyntax BuildCastExpression(ITypeSymbol type, LuaExpressionSyntax expression) {
       var typeExpression = GetTypeName(type.IsNullableType() ? type.NullableElementType() : type);
-      var invocation = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.Cast, typeExpression, expression);
+      var invocation = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.Cast, expression.line, typeExpression, expression);
       if (type.IsNullableType()) {
         invocation.AddArgument(LuaIdentifierNameSyntax.True);
       }
@@ -5385,15 +5387,15 @@ namespace CSharpLua {
     }
 
     private LuaExpressionSyntax GetEnumNoConstantToNumberExpression(LuaExpressionSyntax expression, ITypeSymbol targetType) {
-      string methodName = "System.Convert.To" + targetType.Name;
-      return new LuaInvocationExpressionSyntax(methodName, expression);
+      var methodName = new LuaIdentifierNameSyntax("System.Convert.To" + targetType.Name, expression.line);
+      return new LuaInvocationExpressionSyntax(methodName, expression.line, expression);
     }
 
     private LuaExpressionSyntax GetCastToNumberExpression(LuaExpressionSyntax expression, ITypeSymbol targetType, bool isFromFloat) {
       if (expression is LuaParenthesizedExpressionSyntax parenthesizedExpression) {
         expression = parenthesizedExpression.Expression;
       }
-      string name = (isFromFloat ? "To" : "to") + (targetType.SpecialType == SpecialType.System_Char ? "UInt16" : targetType.Name);
+      var name = new LuaIdentifierNameSyntax((isFromFloat ? "To" : "to") + (targetType.SpecialType == SpecialType.System_Char ? "UInt16" : targetType.Name), expression.line);
       var invocation = LuaIdentifierNameSyntax.System.MemberAccess(name).Invocation(expression);
       if (IsCurChecked) {
         invocation.AddArgument(LuaIdentifierNameSyntax.True);
@@ -5404,8 +5406,8 @@ namespace CSharpLua {
     public override LuaSyntaxNode VisitCheckedStatement(CheckedStatementSyntax node) {
       bool isChecked = node.Keyword.IsKind(SyntaxKind.CheckedKeyword);
       PushChecked(isChecked);
-      var statements = new LuaStatementListSyntax();
-      statements.Statements.Add(new LuaShortCommentStatement(" " + node.Keyword.ValueText));
+      var statements = new LuaStatementListSyntax(node.GetLocation().GetLineSpan().StartLinePosition.Line);
+      statements.Statements.Add(new LuaShortCommentStatement(" " + node.Keyword.ValueText, node.GetLocation().GetLineSpan().StartLinePosition.Line));
       var block = node.Block.Accept<LuaStatementSyntax>(this);
       statements.Statements.Add(block);
       PopChecked();
@@ -5422,7 +5424,7 @@ namespace CSharpLua {
 
     public override LuaSyntaxNode VisitNullableType(NullableTypeSyntax node) {
       var elementType = node.ElementType.AcceptExpression(this);
-      return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.NullableType, elementType);
+      return new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.NullableType, node.GetLocation().GetLineSpan().StartLinePosition.Line, elementType);
     }
   }
 }

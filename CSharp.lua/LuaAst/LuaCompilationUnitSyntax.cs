@@ -57,16 +57,16 @@ namespace CSharpLua.LuaAst {
   public sealed class LuaCompilationUnitSyntax : LuaSyntaxNode {
     public string FilePath { get; }
     public readonly LuaSyntaxList<LuaStatementSyntax> Statements = new();
-    private readonly LuaStatementListSyntax importAreaStatements = new();
+    private readonly LuaStatementListSyntax importAreaStatements = new(-1);
     private bool isImportLinq_;
     private int typeDeclarationCount_;
     internal readonly List<UsingDeclare> UsingDeclares = new();
     internal readonly List<GenericUsingDeclare> GenericUsingDeclares = new();
 
-    public LuaCompilationUnitSyntax(string filePath = "", bool hasGeneratedMark = true) {
+    public LuaCompilationUnitSyntax(string filePath = "", bool hasGeneratedMark = true): base(-1) {
       FilePath = filePath;
       if (hasGeneratedMark) {
-        AddStatement(new LuaShortCommentStatement(GeneratedMarkString));
+        AddStatement(new LuaShortCommentStatement(GeneratedMarkString, -1));
       }
       var system = LuaIdentifierNameSyntax.System;
       AddImport(system, system);
@@ -104,7 +104,7 @@ namespace CSharpLua.LuaAst {
       if (imports.Count > 0) {
         imports.Sort();
         foreach (var import in imports) {
-          AddImport(import.NewPrefix, import.Prefix);
+          AddImport(new(import.NewPrefix, 0), new LuaIdentifierNameSyntax(import.Prefix, 0));
         }
       }
 
@@ -112,7 +112,7 @@ namespace CSharpLua.LuaAst {
       if (genericImports.Count > 0) {
         genericImports.Sort();
         foreach (var import in genericImports) {
-          AddImport(import.NewName, import.InvocationExpression);
+          AddImport(new(import.NewName, 0), import.InvocationExpression);
         }
       }
 
@@ -123,29 +123,29 @@ namespace CSharpLua.LuaAst {
         genericDeclares.Sort();
 
         foreach (var usingDeclare in usingDeclares) {
-          AddImport(usingDeclare.NewPrefix, null);
+          AddImport(new(usingDeclare.NewPrefix, 0), null);
         }
 
         foreach (var usingDeclare in genericDeclares) {
-          AddImport(usingDeclare.NewName, null);
+          AddImport(new(usingDeclare.NewName, 0), null);
         }
 
         var global = LuaIdentifierNameSyntax.Global;
-        var functionExpression = new LuaFunctionExpressionSyntax();
+        var functionExpression = new LuaFunctionExpressionSyntax(-1);
         functionExpression.AddParameter(global);
         foreach (var usingDeclare in usingDeclares) {
-          LuaIdentifierNameSyntax newPrefixIdentifier = usingDeclare.NewPrefix;
+          LuaIdentifierNameSyntax newPrefixIdentifier = new(usingDeclare.NewPrefix, 0);
           functionExpression.Body.AddStatement(
             usingDeclare.Prefix != usingDeclare.NewPrefix
-              ? newPrefixIdentifier.Assignment(usingDeclare.Prefix)
-              : newPrefixIdentifier.Assignment(global.MemberAccess(usingDeclare.Prefix)));
+              ? newPrefixIdentifier.Assignment(new LuaIdentifierNameSyntax(usingDeclare.Prefix, 0))
+              : newPrefixIdentifier.Assignment(global.MemberAccess(new LuaIdentifierNameSyntax(usingDeclare.Prefix, 0))));
         }
 
         foreach (var usingDeclare in genericDeclares) {
-          functionExpression.Body.AddStatement(((LuaIdentifierNameSyntax)usingDeclare.NewName).Assignment(usingDeclare.InvocationExpression));
+          functionExpression.Body.AddStatement(new LuaIdentifierNameSyntax(usingDeclare.NewName, 0).Assignment(usingDeclare.InvocationExpression));
         }
 
-        var invocationExpression = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.Import, functionExpression);
+        var invocationExpression = new LuaInvocationExpressionSyntax(LuaIdentifierNameSyntax.Import, 0, functionExpression);
         importAreaStatements.Statements.Add(invocationExpression);
       }
 

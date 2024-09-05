@@ -23,12 +23,13 @@ namespace CSharpLua.LuaAst {
     public string IfKeyword => Keyword.If;
     public LuaExpressionSyntax Condition { get; }
     public string OpenParenToken => Keyword.Then;
-    public readonly LuaBlockSyntax Body = new();
+    public readonly LuaBlockSyntax Body;
     public readonly LuaSyntaxList<LuaElseIfStatementSyntax> ElseIfStatements = new();
     public LuaElseClauseSyntax Else { get; set; }
     public string CloseParenToken => Keyword.End;
 
-    public LuaIfStatementSyntax(LuaExpressionSyntax condition) {
+    public LuaIfStatementSyntax(LuaExpressionSyntax condition): base(condition.line) {
+      Body = new(condition.line);
       Condition = condition ?? throw new ArgumentNullException(nameof(condition));
     }
 
@@ -41,9 +42,10 @@ namespace CSharpLua.LuaAst {
     public string ElseIfKeyword => Keyword.ElseIf;
     public LuaExpressionSyntax Condition { get; }
     public string OpenParenToken => Keyword.Then;
-    public readonly LuaBlockSyntax Body = new();
+    public readonly LuaBlockSyntax Body;
 
-    public LuaElseIfStatementSyntax(LuaExpressionSyntax condition) {
+    public LuaElseIfStatementSyntax(LuaExpressionSyntax condition): base(condition.line) {
+      Body = new(condition.line);
       Condition = condition ?? throw new ArgumentNullException(nameof(condition)); ;
     }
 
@@ -54,7 +56,11 @@ namespace CSharpLua.LuaAst {
 
   public sealed class LuaElseClauseSyntax : LuaSyntaxNode {
     public string ElseKeyword => Keyword.Else;
-    public readonly LuaBlockSyntax Body = new();
+    public readonly LuaBlockSyntax Body;
+
+    public LuaElseClauseSyntax(int line) : base(line) {
+      Body = new(line);
+    }
 
     internal override void Render(LuaRenderer renderer) {
       renderer.Render(this);
@@ -64,15 +70,15 @@ namespace CSharpLua.LuaAst {
   public sealed class LuaSwitchAdapterStatementSyntax : LuaStatementSyntax {
     public readonly LuaRepeatStatementSyntax RepeatStatement = new(LuaIdentifierNameSyntax.One);
     public LuaBlockSyntax Body => RepeatStatement.Body;
-    
+
     public LuaIdentifierNameSyntax Temp { get; set; }
     private LuaBlockSyntax defaultBlock_;
-    private readonly LuaLocalVariablesSyntax caseLabelVariables_ = new();
+    private readonly LuaLocalVariablesSyntax caseLabelVariables_ = new(-1);
     public LuaIdentifierNameSyntax DefaultLabel { get; set; }
     public readonly Dictionary<int, LuaIdentifierNameSyntax> CaseLabels = new();
     private LuaIfStatementSyntax headIfStatement_;
 
-    public LuaSwitchAdapterStatementSyntax() {
+    public LuaSwitchAdapterStatementSyntax(int line): base(line) {
     }
 
     public void Fill(IEnumerable<LuaStatementSyntax> sections) {
@@ -82,7 +88,7 @@ namespace CSharpLua.LuaAst {
 
       var body = Body;
       body.Statements.Add(caseLabelVariables_);
-      
+
       LuaIfStatementSyntax ifStatement = null;
       foreach (var section in sections) {
         if (section is LuaIfStatementSyntax statement) {
@@ -102,7 +108,7 @@ namespace CSharpLua.LuaAst {
       if (ifStatement != null) {
         body.Statements.Add(ifStatement);
         if (defaultBlock_ != null) {
-          LuaElseClauseSyntax elseClause = new LuaElseClauseSyntax();
+          LuaElseClauseSyntax elseClause = new LuaElseClauseSyntax(ifStatement.line);
           elseClause.Body.Statements.AddRange(defaultBlock_.Statements);
           ifStatement.Else = elseClause;
         }

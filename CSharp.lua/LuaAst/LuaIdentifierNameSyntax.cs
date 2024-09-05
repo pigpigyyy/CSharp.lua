@@ -18,122 +18,118 @@ namespace CSharpLua.LuaAst {
   public class LuaIdentifierNameSyntax : LuaExpressionSyntax {
     public string ValueText { get; }
 
-    public static readonly LuaIdentifierNameSyntax Empty = "";
-    public static readonly LuaIdentifierNameSyntax Placeholder = "_";
-    public static readonly LuaIdentifierNameSyntax One = 1.ToString();
-    public static readonly LuaIdentifierNameSyntax System = "System";
-    public static readonly LuaIdentifierNameSyntax Namespace = "namespace";
-    public static readonly LuaIdentifierNameSyntax Class = "class";
-    public static readonly LuaIdentifierNameSyntax Struct = "struct";
-    public static readonly LuaIdentifierNameSyntax Interface = "interface";
-    public static readonly LuaIdentifierNameSyntax Enum = "enum";
-    public static readonly LuaIdentifierNameSyntax Value = "value";
-    public static readonly LuaIdentifierNameSyntax This = "this";
-    public static readonly LuaIdentifierNameSyntax True = "true";
-    public static readonly LuaIdentifierNameSyntax False = "false";
-    public static readonly LuaIdentifierNameSyntax Throw = "System.throw";
-    public static readonly LuaIdentifierNameSyntax Each = "System.each";
-    public static readonly LuaIdentifierNameSyntax Object = "System.Object";
-    public static readonly LuaIdentifierNameSyntax Array = "System.Array";
-    public static readonly LuaIdentifierNameSyntax EmptyArray = "System.Array.Empty";
-    public static readonly LuaIdentifierNameSyntax Apply = "System.apply";
-    public static readonly LuaIdentifierNameSyntax StaticCtor = "static";
-    public static readonly LuaIdentifierNameSyntax Init = "internal";
-    public static readonly LuaIdentifierNameSyntax Ctor = "__ctor__";
-    public static readonly LuaIdentifierNameSyntax Inherits = "base";
-    public static readonly LuaIdentifierNameSyntax SystemDefault = "System.default";
-    public static readonly LuaIdentifierNameSyntax Property = "System.property";
-    public static readonly LuaIdentifierNameSyntax Event = "System.event";
-    public static readonly LuaIdentifierNameSyntax SystemVoid = "System.Void";
-    public static readonly LuaIdentifierNameSyntax Nil = "nil";
-    public static readonly LuaIdentifierNameSyntax TypeOf = "System.typeof";
-    public static readonly LuaIdentifierNameSyntax Continue = "continue";
-    public static readonly LuaIdentifierNameSyntax StringChar = "string.char";
-    public static readonly LuaIdentifierNameSyntax ToStr = "ToString";
-    public static readonly LuaIdentifierNameSyntax SystemToString = "System.toString";
-    public static readonly LuaIdentifierNameSyntax EnumToString = "EnumToString";
-    public static readonly LuaIdentifierNameSyntax DelegateMake = "System.fn";
-    public static readonly LuaIdentifierNameSyntax DelegateBind = "System.bind";
-    public static readonly LuaIdentifierNameSyntax DelegateCombine = "System.DelegateCombine";
-    public static readonly LuaIdentifierNameSyntax DelegateRemove = "System.DelegateRemove";
-    public static readonly LuaIdentifierNameSyntax IntegerDiv = "System.div";
-    public static readonly LuaIdentifierNameSyntax Mod = "System.mod";
-    public static readonly LuaIdentifierNameSyntax ModFloat = "System.modf";
-    public static readonly LuaIdentifierNameSyntax BitNot = "System.bnot";
-    public static readonly LuaIdentifierNameSyntax BitAnd = "System.band";
-    public static readonly LuaIdentifierNameSyntax BitOr = "System.bor";
-    public static readonly LuaIdentifierNameSyntax BitXor = "System.xor";
-    public static readonly LuaIdentifierNameSyntax ShiftRight = "System.sr";
-    public static readonly LuaIdentifierNameSyntax ShiftLeft = "System.sl";
-    public static readonly LuaIdentifierNameSyntax Try = "System.try";
-    public static readonly LuaIdentifierNameSyntax CatchFilter = "System.when";
-    public static readonly LuaIdentifierNameSyntax Is = "System.is";
-    public static readonly LuaIdentifierNameSyntax As = "System.as";
-    public static readonly LuaIdentifierNameSyntax Cast = "System.cast";
-    public static readonly LuaIdentifierNameSyntax Using = "System.using";
-    public static readonly LuaIdentifierNameSyntax UsingX = "System.usingX";
-    public static readonly LuaIdentifierNameSyntax Linq = "Linq";
-    public static readonly LuaIdentifierNameSyntax SystemLinqEnumerable = "System.Linq.Enumerable";
-    public static readonly LuaIdentifierNameSyntax Delegate = "System.Delegate";
-    public static readonly LuaIdentifierNameSyntax Import = "System.import";
-    public static readonly LuaIdentifierNameSyntax Global = "out";
-    public static readonly LuaIdentifierNameSyntax Metadata = "__metadata__";
-    public static readonly LuaIdentifierNameSyntax Fields = "fields";
-    public static readonly LuaIdentifierNameSyntax Properties = "properties";
-    public static readonly LuaIdentifierNameSyntax Events = "events";
-    public static readonly LuaIdentifierNameSyntax Methods = "methods";
-    public static readonly LuaIdentifierNameSyntax Clone = "__clone__";
-    public static readonly LuaIdentifierNameSyntax NullableClone = "System.Nullable.clone";
-    public static readonly LuaIdentifierNameSyntax CopyThis = "__copy__";
-    public static readonly LuaIdentifierNameSyntax RecordMembers = "__members__";
-    public static readonly LuaIdentifierNameSyntax DateTime = "System.DateTime";
-    public static readonly LuaIdentifierNameSyntax TimeSpan = "System.TimeSpan";
-    public static readonly LuaIdentifierNameSyntax AnonymousType = "System.AnonymousType";
-    public static readonly LuaIdentifierNameSyntax New = "new";
-    public static readonly LuaIdentifierNameSyntax SystemNew = "System.new";
-    public static readonly LuaIdentifierNameSyntax StackAlloc = "System.stackalloc";
-    public static readonly LuaIdentifierNameSyntax GenericT = "__genericT__";
-    public static readonly LuaIdentifierNameSyntax Base = "base";
-    public static readonly LuaIdentifierNameSyntax SystemBase = "System.base";
-    public static readonly LuaIdentifierNameSyntax Tuple = "System.Tuple";
-    public static readonly LuaIdentifierNameSyntax RecordType = "System.RecordType";
-    public static readonly LuaIdentifierNameSyntax RecordValueType = "System.RecordValueType";
-    public static readonly LuaIdentifierNameSyntax Deconstruct = "Deconstruct";
-    public static readonly LuaIdentifierNameSyntax NullableType = "System.Nullable";
-    public static readonly LuaIdentifierNameSyntax Range = "System.Range";
-    public static readonly LuaIdentifierNameSyntax Index = "System.Index";
-    public static readonly LuaIdentifierNameSyntax IndexGetOffset = "System.Index.GetOffset";
-    public static readonly LuaIdentifierNameSyntax __GC = "__gc";
-    public static readonly LuaIdentifierNameSyntax __ToString = "__tostring";
-    public static readonly LuaIdentifierNameSyntax Await = "await";
-    public static readonly LuaIdentifierNameSyntax AwaitAnything = "Await";
-    public static readonly LuaIdentifierNameSyntax Async = "async";
-    public static readonly LuaIdentifierNameSyntax AsyncEach = "System.asynceach";
-    public static readonly LuaIdentifierNameSyntax MoreManyLocalVarTempTable = "const";
-    public static readonly LuaIdentifierNameSyntax InterfaceDefaultMethodVar = "extern";
-    public static readonly LuaIdentifierNameSyntax SystemInit = "System.init";
-    public static readonly LuaIdentifierNameSyntax InlineReturnLabel = "out";
+    public static readonly LuaIdentifierNameSyntax Empty = new("", -1);
+    public static readonly LuaIdentifierNameSyntax Placeholder = new("_", -1);
+    public static readonly LuaIdentifierNameSyntax One = new(1.ToString(), -1);
+    public static readonly LuaIdentifierNameSyntax System = new("System", -1);
+    public static readonly LuaIdentifierNameSyntax Namespace = new("namespace", -1);
+    public static readonly LuaIdentifierNameSyntax Class = new("class", -1);
+    public static readonly LuaIdentifierNameSyntax Struct = new("struct", -1);
+    public static readonly LuaIdentifierNameSyntax Interface = new("interface", -1);
+    public static readonly LuaIdentifierNameSyntax Enum = new("enum", -1);
+    public static readonly LuaIdentifierNameSyntax Value = new("value", -1);
+    public static readonly LuaIdentifierNameSyntax This = new("this", -1);
+    public static readonly LuaIdentifierNameSyntax True = new("true", -1);
+    public static readonly LuaIdentifierNameSyntax False = new("false", -1);
+    public static readonly LuaIdentifierNameSyntax Throw = new("System.throw", -1);
+    public static readonly LuaIdentifierNameSyntax Each = new("System.each", -1);
+    public static readonly LuaIdentifierNameSyntax Object = new("System.Object", -1);
+    public static readonly LuaIdentifierNameSyntax Array = new("System.Array", -1);
+    public static readonly LuaIdentifierNameSyntax EmptyArray = new("System.Array.Empty", -1);
+    public static readonly LuaIdentifierNameSyntax Apply = new("System.apply", -1);
+    public static readonly LuaIdentifierNameSyntax StaticCtor = new("static", -1);
+    public static readonly LuaIdentifierNameSyntax Init = new("internal", -1);
+    public static readonly LuaIdentifierNameSyntax Ctor = new("__ctor__", -1);
+    public static readonly LuaIdentifierNameSyntax Inherits = new("base", -1);
+    public static readonly LuaIdentifierNameSyntax SystemDefault = new("System.default", -1);
+    public static readonly LuaIdentifierNameSyntax Property = new("System.property", -1);
+    public static readonly LuaIdentifierNameSyntax Event = new("System.event", -1);
+    public static readonly LuaIdentifierNameSyntax SystemVoid = new("System.Void", -1);
+    public static readonly LuaIdentifierNameSyntax Nil = new("nil", -1);
+    public static readonly LuaIdentifierNameSyntax TypeOf = new("System.typeof", -1);
+    public static readonly LuaIdentifierNameSyntax Continue = new("continue", -1);
+    public static readonly LuaIdentifierNameSyntax StringChar = new("string.char", -1);
+    public static readonly LuaIdentifierNameSyntax ToStr = new("ToString", -1);
+    public static readonly LuaIdentifierNameSyntax SystemToString = new("System.toString", -1);
+    public static readonly LuaIdentifierNameSyntax EnumToString = new("EnumToString", -1);
+    public static readonly LuaIdentifierNameSyntax DelegateMake = new("System.fn", -1);
+    public static readonly LuaIdentifierNameSyntax DelegateBind = new("System.bind", -1);
+    public static readonly LuaIdentifierNameSyntax DelegateCombine = new("System.DelegateCombine", -1);
+    public static readonly LuaIdentifierNameSyntax DelegateRemove = new("System.DelegateRemove", -1);
+    public static readonly LuaIdentifierNameSyntax IntegerDiv = new("System.div", -1);
+    public static readonly LuaIdentifierNameSyntax Mod = new("System.mod", -1);
+    public static readonly LuaIdentifierNameSyntax ModFloat = new("System.modf", -1);
+    public static readonly LuaIdentifierNameSyntax BitNot = new("System.bnot", -1);
+    public static readonly LuaIdentifierNameSyntax BitAnd = new("System.band", -1);
+    public static readonly LuaIdentifierNameSyntax BitOr = new("System.bor", -1);
+    public static readonly LuaIdentifierNameSyntax BitXor = new("System.xor", -1);
+    public static readonly LuaIdentifierNameSyntax ShiftRight = new("System.sr", -1);
+    public static readonly LuaIdentifierNameSyntax ShiftLeft = new("System.sl", -1);
+    public static readonly LuaIdentifierNameSyntax Try = new("System.try", -1);
+    public static readonly LuaIdentifierNameSyntax CatchFilter = new("System.when", -1);
+    public static readonly LuaIdentifierNameSyntax Is = new("System.is", -1);
+    public static readonly LuaIdentifierNameSyntax As = new("System.as", -1);
+    public static readonly LuaIdentifierNameSyntax Cast = new("System.cast", -1);
+    public static readonly LuaIdentifierNameSyntax Using = new("System.using", -1);
+    public static readonly LuaIdentifierNameSyntax UsingX = new("System.usingX", -1);
+    public static readonly LuaIdentifierNameSyntax Linq = new("Linq", -1);
+    public static readonly LuaIdentifierNameSyntax SystemLinqEnumerable = new("System.Linq.Enumerable", -1);
+    public static readonly LuaIdentifierNameSyntax Delegate = new("System.Delegate", -1);
+    public static readonly LuaIdentifierNameSyntax Import = new("System.import", -1);
+    public static readonly LuaIdentifierNameSyntax Global = new("out", -1);
+    public static readonly LuaIdentifierNameSyntax Metadata = new("__metadata__", -1);
+    public static readonly LuaIdentifierNameSyntax Fields = new("fields", -1);
+    public static readonly LuaIdentifierNameSyntax Properties = new("properties", -1);
+    public static readonly LuaIdentifierNameSyntax Events = new("events", -1);
+    public static readonly LuaIdentifierNameSyntax Methods = new("methods", -1);
+    public static readonly LuaIdentifierNameSyntax Clone = new("__clone__", -1);
+    public static readonly LuaIdentifierNameSyntax NullableClone = new("System.Nullable.clone", -1);
+    public static readonly LuaIdentifierNameSyntax CopyThis = new("__copy__", -1);
+    public static readonly LuaIdentifierNameSyntax RecordMembers = new("__members__", -1);
+    public static readonly LuaIdentifierNameSyntax DateTime = new("System.DateTime", -1);
+    public static readonly LuaIdentifierNameSyntax TimeSpan = new("System.TimeSpan", -1);
+    public static readonly LuaIdentifierNameSyntax AnonymousType = new("System.AnonymousType", -1);
+    public static readonly LuaIdentifierNameSyntax New = new("new", -1);
+    public static readonly LuaIdentifierNameSyntax SystemNew = new("System.new", -1);
+    public static readonly LuaIdentifierNameSyntax StackAlloc = new("System.stackalloc", -1);
+    public static readonly LuaIdentifierNameSyntax GenericT = new("__genericT__", -1);
+    public static readonly LuaIdentifierNameSyntax Base = new("base", -1);
+    public static readonly LuaIdentifierNameSyntax SystemBase = new("System.base", -1);
+    public static readonly LuaIdentifierNameSyntax Tuple = new("System.Tuple", -1);
+    public static readonly LuaIdentifierNameSyntax RecordType = new("System.RecordType", -1);
+    public static readonly LuaIdentifierNameSyntax RecordValueType = new("System.RecordValueType", -1);
+    public static readonly LuaIdentifierNameSyntax Deconstruct = new("Deconstruct", -1);
+    public static readonly LuaIdentifierNameSyntax NullableType = new("System.Nullable", -1);
+    public static readonly LuaIdentifierNameSyntax Range = new("System.Range", -1);
+    public static readonly LuaIdentifierNameSyntax Index = new("System.Index", -1);
+    public static readonly LuaIdentifierNameSyntax IndexGetOffset = new("System.Index.GetOffset", -1);
+    public static readonly LuaIdentifierNameSyntax __GC = new("__gc", -1);
+    public static readonly LuaIdentifierNameSyntax __ToString = new("__tostring", -1);
+    public static readonly LuaIdentifierNameSyntax Await = new("await", -1);
+    public static readonly LuaIdentifierNameSyntax AwaitAnything = new("Await", -1);
+    public static readonly LuaIdentifierNameSyntax Async = new("async", -1);
+    public static readonly LuaIdentifierNameSyntax AsyncEach = new("System.asynceach", -1);
+    public static readonly LuaIdentifierNameSyntax MoreManyLocalVarTempTable = new("const", -1);
+    public static readonly LuaIdentifierNameSyntax InterfaceDefaultMethodVar = new("extern", -1);
+    public static readonly LuaIdentifierNameSyntax SystemInit = new("System.init", -1);
+    public static readonly LuaIdentifierNameSyntax InlineReturnLabel = new("out", -1);
 
     #region QueryExpression
-    public static readonly LuaIdentifierNameSyntax LinqCast = "Linq.Cast";
-    public static readonly LuaIdentifierNameSyntax LinqWhere = "Linq.Where";
-    public static readonly LuaIdentifierNameSyntax LinqSelect = "Linq.Select";
-    public static readonly LuaIdentifierNameSyntax LinqSelectMany = "Linq.SelectMany";
-    public static readonly LuaIdentifierNameSyntax LinqOrderBy = "Linq.OrderBy";
-    public static readonly LuaIdentifierNameSyntax LinqOrderByDescending = "Linq.OrderByDescending";
-    public static readonly LuaIdentifierNameSyntax LinqThenBy = "Linq.ThenBy";
-    public static readonly LuaIdentifierNameSyntax LinqThenByDescending = "Linq.ThenByDescending";
-    public static readonly LuaIdentifierNameSyntax LinqGroupBy = "Linq.GroupBy";
-    public static readonly LuaIdentifierNameSyntax LinqJoin = "Linq.Join";
-    public static readonly LuaIdentifierNameSyntax LinqGroupJoin = "Linq.GroupJoin";
+    public static readonly LuaIdentifierNameSyntax LinqCast = new("Linq.Cast", -1);
+    public static readonly LuaIdentifierNameSyntax LinqWhere = new("Linq.Where", -1);
+    public static readonly LuaIdentifierNameSyntax LinqSelect = new("Linq.Select", -1);
+    public static readonly LuaIdentifierNameSyntax LinqSelectMany = new("Linq.SelectMany", -1);
+    public static readonly LuaIdentifierNameSyntax LinqOrderBy = new("Linq.OrderBy", -1);
+    public static readonly LuaIdentifierNameSyntax LinqOrderByDescending = new("Linq.OrderByDescending", -1);
+    public static readonly LuaIdentifierNameSyntax LinqThenBy = new("Linq.ThenBy", -1);
+    public static readonly LuaIdentifierNameSyntax LinqThenByDescending = new("Linq.ThenByDescending", -1);
+    public static readonly LuaIdentifierNameSyntax LinqGroupBy = new("Linq.GroupBy", -1);
+    public static readonly LuaIdentifierNameSyntax LinqJoin = new("Linq.Join", -1);
+    public static readonly LuaIdentifierNameSyntax LinqGroupJoin = new("Linq.GroupJoin", -1);
     #endregion
 
-    protected LuaIdentifierNameSyntax(string valueText) {
+    public LuaIdentifierNameSyntax(string valueText, int line): base(line) {
       ValueText = valueText;
-    }
-
-    public static implicit operator LuaIdentifierNameSyntax(string valueText) {
-      return new(valueText);
     }
 
     internal override void Render(LuaRenderer renderer) {
@@ -151,7 +147,7 @@ namespace CSharpLua.LuaAst {
     public LuaPropertyOrEventIdentifierNameSyntax(bool isProperty, LuaIdentifierNameSyntax name) : this(isProperty, true, name) {
     }
 
-    public LuaPropertyOrEventIdentifierNameSyntax(bool isProperty, bool isGetOrAdd, LuaIdentifierNameSyntax name) : base(string.Empty) {
+    public LuaPropertyOrEventIdentifierNameSyntax(bool isProperty, bool isGetOrAdd, LuaIdentifierNameSyntax name) : base(string.Empty, name.line) {
       IsProperty = isProperty;
       IsGetOrAdd = isGetOrAdd;
       Name = name;
@@ -179,12 +175,12 @@ namespace CSharpLua.LuaAst {
   public sealed class LuaSymbolNameSyntax : LuaIdentifierNameSyntax {
     public LuaExpressionSyntax NameExpression { get; private set; }
 
-    public LuaSymbolNameSyntax(LuaExpressionSyntax identifierName) : base("") {
+    public LuaSymbolNameSyntax(LuaExpressionSyntax identifierName) : base("", identifierName.line) {
       NameExpression = identifierName;
     }
 
-    public void Update(string newName) {
-      NameExpression = newName;
+    public void Update(string newName, int line) {
+      NameExpression = new LuaIdentifierNameSyntax(newName, line);
     }
 
     internal override void Render(LuaRenderer renderer) {
@@ -195,7 +191,7 @@ namespace CSharpLua.LuaAst {
   public sealed class LuaImportNameSyntax : LuaIdentifierNameSyntax {
     public string TypeName { get; }
 
-    public LuaImportNameSyntax(string shorName, string name) : base(shorName) {
+    public LuaImportNameSyntax(string shorName, string name, int line) : base(shorName, line) {
       TypeName = name;
     }
   }

@@ -22,6 +22,10 @@ namespace CSharpLua.LuaAst {
     public string OpenParenToken => Tokens.OpenParentheses;
     public string CloseParenToken => Tokens.CloseParentheses;
     public readonly LuaSyntaxList<LuaExpressionSyntax> Arguments = new();
+
+    public LuaArgumentListSyntax(int line) : base(line) {
+    }
+
     public bool IsCallSingleTable { get; set; }
 
     public void AddArgument(LuaExpressionSyntax argument) {
@@ -40,30 +44,35 @@ namespace CSharpLua.LuaAst {
   }
 
   public sealed class LuaInvocationExpressionSyntax : LuaExpressionSyntax {
-    public readonly LuaArgumentListSyntax ArgumentList = new();
+    public readonly LuaArgumentListSyntax ArgumentList;
     public LuaExpressionSyntax Expression { get; }
     public List<LuaExpressionSyntax> Arguments => ArgumentList.Arguments;
 
-    public LuaInvocationExpressionSyntax(LuaExpressionSyntax expression) {
+    public LuaInvocationExpressionSyntax(LuaExpressionSyntax expression, int line): base(expression.line < 0 ? line : expression.line) {
+      ArgumentList = new LuaArgumentListSyntax(this.line);
       Expression = expression ?? throw new ArgumentNullException(nameof(expression));
     }
 
-    public LuaInvocationExpressionSyntax(LuaExpressionSyntax expression, LuaExpressionSyntax argument1, LuaExpressionSyntax argument2) : this(expression) {
+    public LuaInvocationExpressionSyntax(LuaExpressionSyntax expression, int line, LuaExpressionSyntax argument1, LuaExpressionSyntax argument2) : this(expression, line) {
+      ArgumentList = new LuaArgumentListSyntax(line);
       AddArgument(argument1);
       AddArgument(argument2);
     }
 
-    public LuaInvocationExpressionSyntax(LuaExpressionSyntax expression, LuaExpressionSyntax argument1, LuaExpressionSyntax argument2, LuaExpressionSyntax argument3) : this(expression) {
+    public LuaInvocationExpressionSyntax(LuaExpressionSyntax expression, int line, LuaExpressionSyntax argument1, LuaExpressionSyntax argument2, LuaExpressionSyntax argument3) : this(expression, line) {
+      ArgumentList = new LuaArgumentListSyntax(line);
       AddArgument(argument1);
       AddArgument(argument2);
       AddArgument(argument3);
     }
 
-    public LuaInvocationExpressionSyntax(LuaExpressionSyntax expression, IEnumerable<LuaExpressionSyntax> arguments) : this(expression) {
+    public LuaInvocationExpressionSyntax(LuaExpressionSyntax expression, int line, IEnumerable<LuaExpressionSyntax> arguments) : this(expression, line) {
+      ArgumentList = new LuaArgumentListSyntax(line);
       AddArguments(arguments);
     }
 
-    public LuaInvocationExpressionSyntax(LuaExpressionSyntax expression, params LuaExpressionSyntax[] arguments) : this(expression) {
+    public LuaInvocationExpressionSyntax(LuaExpressionSyntax expression, int line, params LuaExpressionSyntax[] arguments) : this(expression, line) {
+      ArgumentList = new LuaArgumentListSyntax(line);
       AddArguments(arguments);
     }
 

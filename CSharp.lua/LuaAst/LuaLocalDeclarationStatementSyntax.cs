@@ -16,6 +16,7 @@ limitations under the License.
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CSharpLua.LuaAst {
   public sealed class LuaLocalVariablesSyntax : LuaVariableDeclarationSyntax {
@@ -23,10 +24,10 @@ namespace CSharpLua.LuaAst {
     public readonly LuaSyntaxList<LuaIdentifierNameSyntax> Variables = new();
     public LuaEqualsValueClauseListSyntax Initializer { get; set; }
 
-    public LuaLocalVariablesSyntax() {
+    public LuaLocalVariablesSyntax(int line): base(line) {
     }
 
-    public LuaLocalVariablesSyntax(IEnumerable<LuaIdentifierNameSyntax> variables, IEnumerable<LuaExpressionSyntax> values = null) {
+    public LuaLocalVariablesSyntax(IEnumerable<LuaIdentifierNameSyntax> variables, IEnumerable<LuaExpressionSyntax> values = null): base(-1) {
       Variables.AddRange(variables);
       if (values != null) {
         Initializer = new LuaEqualsValueClauseListSyntax(values);
@@ -44,15 +45,15 @@ namespace CSharpLua.LuaAst {
     public string EqualsToken => Tokens.Equals;
     public readonly LuaSyntaxList<LuaExpressionSyntax> Values = new();
 
-    public LuaEqualsValueClauseListSyntax() {
+    public LuaEqualsValueClauseListSyntax(int line): base(line) {
 
     }
 
-    public LuaEqualsValueClauseListSyntax(LuaExpressionSyntax value) {
+    public LuaEqualsValueClauseListSyntax(LuaExpressionSyntax value): base(value.line) {
       Values.Add(value);
     }
 
-    public LuaEqualsValueClauseListSyntax(IEnumerable<LuaExpressionSyntax> values) {
+    public LuaEqualsValueClauseListSyntax(IEnumerable<LuaExpressionSyntax> values): base(-1) {
       Values.AddRange(values);
     }
 
@@ -62,6 +63,9 @@ namespace CSharpLua.LuaAst {
   }
 
   public abstract class LuaVariableDeclarationSyntax : LuaSyntaxNode {
+    protected LuaVariableDeclarationSyntax(int line) : base(line) {
+    }
+
     public abstract bool IsEmpty { get; }
 
     public static implicit operator LuaStatementSyntax(LuaVariableDeclarationSyntax node) {
@@ -71,6 +75,9 @@ namespace CSharpLua.LuaAst {
 
   public sealed class LuaVariableListDeclarationSyntax : LuaVariableDeclarationSyntax {
     public readonly LuaSyntaxList<LuaVariableDeclaratorSyntax> Variables = new();
+
+    public LuaVariableListDeclarationSyntax(int line) : base(line) {
+    }
 
     public override bool IsEmpty => Variables.Count == 0;
 
@@ -82,7 +89,7 @@ namespace CSharpLua.LuaAst {
   public sealed class LuaLocalDeclarationStatementSyntax : LuaStatementSyntax {
     public LuaVariableDeclarationSyntax Declaration { get; }
 
-    public LuaLocalDeclarationStatementSyntax(LuaVariableDeclarationSyntax declaration) {
+    public LuaLocalDeclarationStatementSyntax(LuaVariableDeclarationSyntax declaration): base(declaration.line) {
       Declaration = declaration ?? throw new ArgumentNullException(nameof(declaration));
     }
 
@@ -96,7 +103,7 @@ namespace CSharpLua.LuaAst {
     public LuaIdentifierNameSyntax Identifier { get; }
     public LuaEqualsValueClauseSyntax Initializer { get; set; }
 
-    public LuaVariableDeclaratorSyntax(LuaIdentifierNameSyntax identifier, LuaExpressionSyntax expression = null) {
+    public LuaVariableDeclaratorSyntax(LuaIdentifierNameSyntax identifier, LuaExpressionSyntax expression = null): base(identifier.line) {
       Identifier = identifier ?? throw new ArgumentNullException(nameof(identifier));
       if (expression != null) {
         Initializer = new LuaEqualsValueClauseSyntax(expression);
@@ -111,11 +118,11 @@ namespace CSharpLua.LuaAst {
   public sealed class LuaLocalVariableDeclaratorSyntax : LuaStatementSyntax {
     public LuaVariableDeclaratorSyntax Declarator { get; }
 
-    public LuaLocalVariableDeclaratorSyntax(LuaVariableDeclaratorSyntax declarator) {
+    public LuaLocalVariableDeclaratorSyntax(LuaVariableDeclaratorSyntax declarator): base(declarator.line) {
       Declarator = declarator ?? throw new ArgumentNullException(nameof(declarator));
     }
 
-    public LuaLocalVariableDeclaratorSyntax(LuaIdentifierNameSyntax identifier, LuaExpressionSyntax expression = null) {
+    public LuaLocalVariableDeclaratorSyntax(LuaIdentifierNameSyntax identifier, LuaExpressionSyntax expression = null): base(identifier.line) {
       Declarator = new LuaVariableDeclaratorSyntax(identifier, expression);
     }
 
@@ -128,7 +135,7 @@ namespace CSharpLua.LuaAst {
     public string EqualsToken => Tokens.Equals;
     public LuaExpressionSyntax Value { get; }
 
-    public LuaEqualsValueClauseSyntax(LuaExpressionSyntax value) {
+    public LuaEqualsValueClauseSyntax(LuaExpressionSyntax value): base(value.line) {
       Value = value ?? throw new ArgumentNullException(nameof(value));
     }
 
@@ -141,18 +148,21 @@ namespace CSharpLua.LuaAst {
     public string LocalKeyword => Keyword.Local;
     public readonly LuaSyntaxList<LuaIdentifierNameSyntax> Variables = new();
 
+    public LuaLocalAreaSyntax(int line) : base(line) {
+    }
+
     internal override void Render(LuaRenderer renderer) {
       renderer.Render(this);
     }
   }
 
   public sealed class LuaLocalFunctionSyntax : LuaStatementSyntax {
-    public readonly LuaStatementListSyntax Comments = new();
+    public readonly LuaStatementListSyntax Comments = new(-1);
     public string LocalKeyword => Keyword.Local;
     public LuaIdentifierNameSyntax IdentifierName { get; }
     public LuaFunctionExpressionSyntax FunctionExpression { get; }
 
-    public LuaLocalFunctionSyntax(LuaIdentifierNameSyntax identifierName, LuaFunctionExpressionSyntax functionExpression, LuaDocumentStatement documentation = null) {
+    public LuaLocalFunctionSyntax(LuaIdentifierNameSyntax identifierName, LuaFunctionExpressionSyntax functionExpression, LuaDocumentStatement documentation = null): base(identifierName.line) {
       IdentifierName = identifierName ?? throw new ArgumentNullException(nameof(identifierName));
       FunctionExpression = functionExpression ?? throw new ArgumentNullException(nameof(functionExpression));
       if (documentation != null) {
@@ -173,10 +183,10 @@ namespace CSharpLua.LuaAst {
       renderer.Render(this);
     }
 
-    public LuaLocalTupleVariableExpression() {
+    public LuaLocalTupleVariableExpression(int line) : base(line) {
     }
 
-    public LuaLocalTupleVariableExpression(IEnumerable<LuaIdentifierNameSyntax> variables) {
+    public LuaLocalTupleVariableExpression(IEnumerable<LuaIdentifierNameSyntax> variables): base(-1) {
       Variables.AddRange(variables);
     }
   }
