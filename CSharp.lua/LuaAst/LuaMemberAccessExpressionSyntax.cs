@@ -126,7 +126,7 @@ namespace CSharpLua.LuaAst {
     }
 
     public void Update(LuaExpressionSyntax expression, LuaCodeTemplateExpressionSyntax getExpression) {
-      Name = new LuaSymbolNameSyntax(expression);
+      Name = new LuaSymbolNameSyntax(expression, expression.line);
       GetExpression = getExpression;
     }
 

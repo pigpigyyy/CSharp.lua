@@ -81,14 +81,17 @@ namespace CSharpLua.LuaAst {
     public LuaReturnStatementSyntax(int line): base(line) {
     }
 
-    public LuaReturnStatementSyntax(LuaExpressionSyntax expression): base(expression.line) {
+    public LuaReturnStatementSyntax(LuaExpressionSyntax expression, int line): base(((expression?.line ?? -1) < 0) ? line : expression?.line ?? -1) {
       if (expression != null) {
         Expressions.Add(expression);
       }
     }
 
-    public LuaReturnStatementSyntax(IEnumerable<LuaExpressionSyntax> expressions): base(expressions.First().line) {
+    public LuaReturnStatementSyntax(IEnumerable<LuaExpressionSyntax> expressions): base(-1) {
       Expressions.AddRange(expressions);
+      if (Expressions.Count > 0) {
+        line = Expressions.First().line;
+      }
     }
 
     internal override void Render(LuaRenderer renderer) {
@@ -115,7 +118,7 @@ namespace CSharpLua.LuaAst {
     public LuaContinueAdapterStatementSyntax(bool isWithinTry, int line) : base(line) {
       Assignment = LuaIdentifierNameSyntax.Continue.Assignment(LuaIdentifierNameSyntax.True);
       if (isWithinTry) {
-        Statement = new LuaReturnStatementSyntax(LuaIdentifierLiteralExpressionSyntax.False);
+        Statement = new LuaReturnStatementSyntax(LuaIdentifierLiteralExpressionSyntax.False, line);
       } else {
         Statement = LuaBreakStatementSyntax.Instance;
       }
@@ -129,7 +132,7 @@ namespace CSharpLua.LuaAst {
   public sealed class LuaBlankLinesStatement : LuaStatementSyntax {
     public int Count { get; }
 
-    public LuaBlankLinesStatement(int count, int line) : base(line) {
+    public LuaBlankLinesStatement(int count) : base(-1) {
       Count = count;
     }
 
@@ -137,7 +140,7 @@ namespace CSharpLua.LuaAst {
       renderer.Render(this);
     }
 
-    public static readonly LuaBlankLinesStatement One = new(1, -1);
+    public static readonly LuaBlankLinesStatement One = new(1);
   }
 
   public abstract class LuaCommentStatement : LuaStatementSyntax {

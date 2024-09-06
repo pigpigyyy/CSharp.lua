@@ -24,7 +24,7 @@ namespace CSharpLua.LuaAst {
       this.line = line;
     }
 
-    public int line { get; private set; }
+    public int line { get; set; }
 
     internal virtual void Render(LuaRenderer renderer) {
       throw new NotSupportedException($"{GetType().Name} is not override");

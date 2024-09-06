@@ -175,7 +175,7 @@ namespace CSharpLua.LuaAst {
   public sealed class LuaSymbolNameSyntax : LuaIdentifierNameSyntax {
     public LuaExpressionSyntax NameExpression { get; private set; }
 
-    public LuaSymbolNameSyntax(LuaExpressionSyntax identifierName) : base("", identifierName.line) {
+    public LuaSymbolNameSyntax(LuaExpressionSyntax identifierName, int line) : base("", line < 0 ? identifierName.line : line) {
       NameExpression = identifierName;
     }
 

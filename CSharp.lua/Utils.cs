@@ -1495,7 +1495,11 @@ namespace CSharpLua {
     }
 
     public static LuaExpressionSyntax AcceptExpression(this CSharpSyntaxNode node, LuaSyntaxNodeTransform transform) {
-      return node.Accept<LuaExpressionSyntax>(transform);
+      var result = node.Accept<LuaExpressionSyntax>(transform);
+      if (result != null) {
+        result.line = node.GetLocation().GetLineSpan().StartLinePosition.Line;
+      }
+      return result;
     }
 
     public static bool IsProtobufNetDeclaration(this INamedTypeSymbol type) {

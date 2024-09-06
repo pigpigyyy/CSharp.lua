@@ -104,7 +104,7 @@ namespace CSharpLua.LuaAst {
     public string OperatorToken => Tokens.Equals;
     public LuaExpressionSyntax Right { get; }
 
-    public LuaAssignmentExpressionSyntax(LuaExpressionSyntax left, LuaExpressionSyntax right): base(left.line) {
+    public LuaAssignmentExpressionSyntax(LuaExpressionSyntax left, LuaExpressionSyntax right): base(left.line < 0 ? right.line : left.line) {
       Left = left ?? throw new ArgumentNullException(nameof(left));
       Right = right ?? throw new ArgumentNullException(nameof(right));
     }

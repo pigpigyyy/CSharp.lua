@@ -57,7 +57,7 @@ namespace CSharpLua.LuaAst {
   public sealed class LuaCompilationUnitSyntax : LuaSyntaxNode {
     public string FilePath { get; }
     public readonly LuaSyntaxList<LuaStatementSyntax> Statements = new();
-    private readonly LuaStatementListSyntax importAreaStatements = new(-1);
+    private readonly LuaStatementListSyntax importAreaStatements = new(0);
     private bool isImportLinq_;
     private int typeDeclarationCount_;
     internal readonly List<UsingDeclare> UsingDeclares = new();

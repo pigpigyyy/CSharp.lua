@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+using System;
 using System.Collections.Generic;
 
 namespace CSharpLua.LuaAst {
@@ -22,9 +23,14 @@ namespace CSharpLua.LuaAst {
     private readonly LuaFunctionExpressionSyntax function_ = new(-1);
 
     protected LuaWrapFunctionStatementSyntax(int line) : base(line) {
+      function_.line = line;
+      function_.Body.line = line;
     }
 
     protected void UpdateIdentifiers(LuaIdentifierNameSyntax name, LuaIdentifierNameSyntax target, LuaIdentifierNameSyntax memberName, LuaIdentifierNameSyntax parameter = null) {
+      var line = name.line >= 0 ? name.line : target.line >= 0 ? target.line : memberName.line >= 0 ? memberName.line : parameter?.line ?? -1;
+      function_.line = line;
+      function_.Body.line = line;
       var invoke = target.MemberAccess(memberName).Invocation();
       invoke.AddArgument(new LuaStringLiteralExpressionSyntax(name));
       invoke.AddArgument(function_);

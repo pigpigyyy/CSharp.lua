@@ -633,9 +633,9 @@ namespace CSharpLua {
           FillManifestInitConf(t);
           var functionExpression = new LuaFunctionExpressionSyntax(-1);
           functionExpression.AddParameter(pathIdentifier);
-          functionExpression.AddStatement(new LuaReturnStatementSyntax(LuaIdentifierNameSyntax.SystemInit.Invocation(t)));
+          functionExpression.AddStatement(new LuaReturnStatementSyntax(LuaIdentifierNameSyntax.SystemInit.Invocation(t), -1));
           var luaCompilationUnit = new LuaCompilationUnitSyntax();
-          luaCompilationUnit.AddStatement(new LuaReturnStatementSyntax(functionExpression));
+          luaCompilationUnit.AddStatement(new LuaReturnStatementSyntax(functionExpression, -1));
           string outFile = Path.Combine(outFolder, "manifest.lua");
           Write(luaCompilationUnit, outFile);
         }
@@ -646,7 +646,7 @@ namespace CSharpLua {
       if (mainEntryPoint_ != null) {
         LuaIdentifierNameSyntax name = new LuaIdentifierNameSyntax(mainEntryPoint_.Name, t.line);
         var typeName = GetTypeName(mainEntryPoint_.ContainingType);
-        var identifier = new LuaSymbolNameSyntax(typeName.MemberAccess(name));
+        var identifier = new LuaSymbolNameSyntax(typeName.MemberAccess(name), t.line);
         t.Add(name, new LuaStringLiteralExpressionSyntax(identifier));
       }
 
@@ -686,7 +686,7 @@ namespace CSharpLua {
         } else {
           var function = new LuaFunctionExpressionSyntax(assemblyTable.line);
           function.AddParameter(LuaIdentifierNameSyntax.Global);
-          function.AddStatement(new LuaReturnStatementSyntax(assemblyTable));
+          function.AddStatement(new LuaReturnStatementSyntax(assemblyTable, function.line));
           t.Add(new LuaIdentifierNameSyntax(kAssembly, -1), function);
         }
       }
@@ -767,7 +767,8 @@ namespace CSharpLua {
           name = memberNames_.GetOrAdd(symbol, symbol => {
             var identifierName = InternalGetMemberName(symbol);
             CheckMemberBadName(identifierName.ValueText, symbol);
-            return new LuaSymbolNameSyntax(identifierName);
+            var line = symbol.GetDeclaringSyntaxNode()?.GetLocation().GetLineSpan().StartLinePosition.Line ?? -1;
+            return new LuaSymbolNameSyntax(identifierName, line);
           });
         }
       }
@@ -864,15 +865,16 @@ namespace CSharpLua {
 
     private LuaIdentifierNameSyntax GetAllTypeSameName(ISymbol symbol) {
       List<ISymbol> sameNameMembers = GetSameNameMembers(symbol);
+      var line = symbol.GetDeclaringSyntaxNode()?.GetLocation().GetLineSpan().StartLinePosition.Line ?? -1;
       LuaIdentifierNameSyntax symbolExpression = null;
       int index = 0;
       foreach (ISymbol member in sameNameMembers) {
         if (IsSameNameSymbol(member, symbol)) {
-          symbolExpression = new(GetSymbolBaseName(symbol), -1);
+          symbolExpression = new(GetSymbolBaseName(symbol), line);
         } else {
           if (!memberNames_.ContainsKey(member)) {
-            LuaIdentifierNameSyntax identifierName = new(GetSymbolBaseName(member), -1);
-            memberNames_.Add(member, new LuaSymbolNameSyntax(identifierName));
+            LuaIdentifierNameSyntax identifierName = new(GetSymbolBaseName(member), line);
+            memberNames_.Add(member, new LuaSymbolNameSyntax(identifierName, line));
           }
         }
         if (index > 0) {
@@ -890,7 +892,8 @@ namespace CSharpLua {
 
     internal LuaIdentifierNameSyntax AddInnerName(ISymbol symbol) {
       string name = GetSymbolBaseName(symbol);
-      LuaSymbolNameSyntax symbolName = new LuaSymbolNameSyntax(new LuaIdentifierNameSyntax(name, -1));
+      var line = symbol.GetDeclaringSyntaxNode()?.GetLocation().GetLineSpan().StartLinePosition.Line ?? -1;
+      LuaSymbolNameSyntax symbolName = new LuaSymbolNameSyntax(new LuaIdentifierNameSyntax(name, line), line);
       bool success = propertyOrEventInnerFieldNames_.TryAdd(symbol, symbolName);
       Contract.Assert(success);
       return symbolName;
@@ -945,7 +948,8 @@ namespace CSharpLua {
           symbolExpression = identifierName;
         } else {
           if (!memberNames_.ContainsKey(member)) {
-            memberNames_.Add(member, new LuaSymbolNameSyntax(identifierName));
+            var line = symbol.GetDeclaringSyntaxNode()?.GetLocation().GetLineSpan().StartLinePosition.Line ?? -1;
+            memberNames_.Add(member, new LuaSymbolNameSyntax(identifierName, line));
           }
         }
         ++index;

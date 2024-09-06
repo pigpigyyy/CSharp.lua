@@ -297,7 +297,7 @@ namespace CSharpLua {
         WriteSeparatedSyntaxList(node.Expressions);
       }
       WriteSemicolon(node.SemicolonToken);
-      WriteNewLine(node.Expressions.Count > 0 ? node.Expressions.Last() : node);
+      WriteNewLine(node);
     }
 
     internal void Render(LuaTableExpression node) {
